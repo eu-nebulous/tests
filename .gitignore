@@ -1,0 +1,15 @@
+/nebulous-automated-tests/.classpath
+/nebulous-automated-tests/.gitattributes
+/nebulous-automated-tests/.project
+/nebulous-automated-tests/.settings/org.eclipse.buildship.core.prefs
+/nebulous-automated-tests/.settings/org.eclipse.jdt.core.prefs
+/nebulous-automated-tests/gradlew.bat
+/nebulous-automated-tests/gradle/wrapper/gradle-wrapper.jar
+/nebulous-automated-tests/gradle/wrapper/gradle-wrapper.properties
+/nebulous-automated-tests/gradlew
+__pycache__/
+.nox/
+/nebulous-automated-tests/maven-repo
+/tests/.settings
+/tests/logs
+/apps/mqtt_processor_app/worker/.vscode
