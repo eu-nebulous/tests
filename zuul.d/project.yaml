@@ -1,12 +1,7 @@
 - project:
     check:
       jobs:
-        - nebulous-automated-tests-build-java-libraries
         - nox-linters
     gate:
       jobs:
-        - nebulous-automated-tests-build-java-libraries
         - nox-linters
-    promote:
-      jobs:
-        - nebulous-automated-tests-upload-java-libraries
