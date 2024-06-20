@@ -1,4 +1,4 @@
-package eut.nebulouscloud.tests;
+package eut.nebulouscloud.tests.mqttapp;
 
 import java.util.Collections;
 import java.util.Date;
@@ -34,9 +34,9 @@ public class MQTTProcessorAppMessageBrokerInterface {
 	
 	public class SimpleMQTTMessage {
 		final protected ObjectMapper om = new ObjectMapper();
-		final String topic;
-		final String payload;
-		final Date date;
+		public final String topic;
+		public final String payload;
+		public final Date date;
 
 		public SimpleMQTTMessage(String topic, String payload) {
 			super();

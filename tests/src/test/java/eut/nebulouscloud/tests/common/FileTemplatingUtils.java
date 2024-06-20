@@ -1,4 +1,4 @@
-package eut.nebulouscloud.tests;
+package eut.nebulouscloud.tests.common;
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
 import java.util.HashMap;
@@ -34,13 +34,14 @@ public class FileTemplatingUtils {
 	 */
 	public static String loadFileAndSubstitute(String path,Map<String,String> substitutions) throws Exception
 	{
+		LOGGER.info(path);
 		StringBuilder contentBuilder = new StringBuilder();
         try (BufferedReader br = new BufferedReader(new InputStreamReader(FileTemplatingUtils.class.getClassLoader()
 				.getResourceAsStream(path)))) {
             String line;
             while ((line = br.readLine()) != null) {
                 // Apply substitutions
-                line = applySubstitutions(line, substitutions);
+            	if(substitutions!=null)line = applySubstitutions(line, substitutions);
                 contentBuilder.append(line).append("\n");
             }
         }

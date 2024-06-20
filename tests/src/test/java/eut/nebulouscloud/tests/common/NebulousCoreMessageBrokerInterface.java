@@ -1,5 +1,6 @@
-package eut.nebulouscloud.tests;
+package eut.nebulouscloud.tests.common;
 
+import java.util.Collection;
 import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
@@ -9,6 +10,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Predicate;
+import java.util.stream.IntStream;
 
 import org.apache.qpid.protonj2.client.Message;
 import org.apache.qpid.protonj2.client.exceptions.ClientException;
@@ -42,11 +44,12 @@ public class NebulousCoreMessageBrokerInterface {
 	
 	/**
 	 * Broker connection properties 
-	 */
-	final String brokerHost = "localhost";
-	final int brokerPort = 5672;
-	final String brokerUser = "admin";
-	final String brokerPassword ="admin";
+	 */	
+	final String brokerHost = Optional.ofNullable(System.getenv("NEBULOUS_BROKER_HOST")).orElse("localhost"); 
+	final int brokerPort = Integer.parseInt(Optional.ofNullable(System.getenv("NEBULOUS_BROKER_PORT")).orElse("5672")); 
+	final String brokerUser = Optional.ofNullable(System.getenv("NEBULOUS_BROKER_USER")).orElseThrow(() -> new IllegalStateException("NEBULOUS_BROKER_USER env var is not defined"));
+	final String brokerPassword = Optional.ofNullable(System.getenv("NEBULOUS_BROKER_PASSWORD")).orElseThrow(() -> new IllegalStateException("NEBULOUS_BROKER_PASSWORD env var is not defined"));
+	
 			
 	private List<NebulOuSCoreMessage> messages = Collections.synchronizedList(new LinkedList<NebulOuSCoreMessage>());
 
@@ -94,8 +97,46 @@ public class NebulousCoreMessageBrokerInterface {
 				: messagesFromAppAndTopic(appId, topic);
 		do {
 			synchronized (messages) {
-
 				result = messages.stream().filter(finalPredicate).findFirst();
+			}
+			if (result.isEmpty() && new Date().getTime() < timeout) {
+				LOGGER.trace(String.format("Waiting for message. %.2fs left for timeout.",
+						((timeout - new Date().getTime()) / 1000.0)));
+				try {
+					Thread.sleep(1000);
+				} catch (InterruptedException e) {
+					e.printStackTrace();
+				}
+			}
+		} while (result.isEmpty() && new Date().getTime() < timeout);
+		if (new Date().getTime() > timeout) {
+			LOGGER.error("Timeout waiting for a message");
+		}
+		return result;
+
+	};
+	
+	
+	/**
+	 * Same as findFirst but reversed
+	 * @param appId
+	 * @param topic
+	 * @param predicate
+	 * @param timeoutSeconds
+	 * @return
+	 */
+	public Optional<NebulOuSCoreMessage> findLast(String appId, String topic, Predicate<NebulOuSCoreMessage> predicate,
+			int timeoutSeconds) {
+		Optional<NebulOuSCoreMessage> result = Optional.empty();
+		long timeout = new Date().getTime() + (timeoutSeconds * 1000);
+		Predicate<NebulOuSCoreMessage> finalPredicate = predicate != null
+				? messagesFromAppAndTopic(appId, topic).and(predicate)
+				: messagesFromAppAndTopic(appId, topic);
+		do {
+			synchronized (messages) {
+				Object[] temp = messages.toArray();
+				result =  ((Collection<NebulOuSCoreMessage>) IntStream.range(0, temp.length)
+                        .mapToObj(i -> temp[temp.length - i - 1])).stream().filter(finalPredicate).findFirst();
 			}
 			if (result.isEmpty() && new Date().getTime() < timeout) {
 				LOGGER.error(String.format("Waiting for message. %.2fs left for timeout.",
@@ -113,7 +154,7 @@ public class NebulousCoreMessageBrokerInterface {
 		return result;
 
 	};
-
+	
 	class MyConsumerHandler extends Handler {
 		NebulousCoreMessageBrokerInterface messageStore;
 

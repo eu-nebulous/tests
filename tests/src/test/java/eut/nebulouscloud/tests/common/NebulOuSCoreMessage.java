@@ -1,4 +1,4 @@
-package eut.nebulouscloud.tests;
+package eut.nebulouscloud.tests.common;
 
 import java.util.Date;
 import java.util.Map;

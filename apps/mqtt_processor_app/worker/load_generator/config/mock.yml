@@ -1,0 +1,10 @@
+camera_id: 0
+data_folder: tmp_img_folder2
+mqtt_ip: "broker.hivemq.com"
+mqtt_port: 1883
+mqtt_topic: "neb/test/input"
+ftp_api_url: "http://158.39.48.154:88/"
+interval: 0.05
+ftp_username: ""
+ftp_password: ""
+inference_duration: 5
