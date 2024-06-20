@@ -1,0 +1,20 @@
+- job:
+    name: nebulous-automated-tests-build-java-libraries
+    parent: nebulous-build-java-libraries
+    provides:
+      - nebulous-automated-tests-java-libraries
+    description: Build the java libraries to be used as ActiveMQ plugin.
+    files: &library_files
+      - ^iot_dpp/
+    vars: &library_vars
+      java_libraries:
+        - context: iot_dpp
+
+- job:
+    name: nebulous-automated-tests-upload-java-libraries
+    parent: nebulous-upload-java-libraries
+    provides:
+      - nebulous-lautomated-tests-java-libraries
+    description: Build and upload the java libraries.
+    files: *library_files
+    vars: *library_vars

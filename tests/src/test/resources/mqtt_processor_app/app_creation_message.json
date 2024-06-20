@@ -2,7 +2,7 @@
   "title": "{{APP_ID}}",
   "uuid": "{{APP_ID}}",
   "status": "deploying",
-  "content": "apiVersion: \"core.oam.dev/v1beta1\"\r\nkind: \"Application\"\r\nmetadata:\r\n  name: \"{{APP_ID}}\"\r\nspec:\r\n  components:\r\n  - name: \"dummy-app-worker\"\r\n    type: \"webservice\"\r\n    properties:\r\n      image: \"docker.io/rsprat/mytestrepo:v1\"\r\n      cpu: \"2.0\"\r\n      memory: \"2048Mi\"\r\n      imagePullPolicy: \"Always\"\r\n      cmd:\r\n      - \"python\"\r\n      - \"-u\"\r\n      - \"worker.py\"\r\n      env:\r\n      - name: \"mqtt_ip\"\r\n        value: \"{{APP_MQTT_BROKER_SERVER}}\"\r\n      - name: \"mqtt_port\"\r\n        value: \"{{APP_MQTT_BROKER_PORT}}\"\r\n      - name: \"mqtt_subscribe_topic\"\r\n        value: \"{{APP_MQTT_INPUT_TOPIC}}\"\r\n      - name: \"mqtt_publish_topic\"\r\n        value: \"{{APP_MQTT_OUTPUT_TOPIC}}\"\r\n      - name: \"report_metrics_to_ems\"\r\n        value: \"{{REPORT_METRICS_TO_EMS}}\"\r\n      - name: \"nebulous_ems_ip\"\r\n        valueFrom:\r\n          fieldRef:\r\n            fieldPath: status.hostIP\r\n      - name: \"nebulous_ems_port\"\r\n        value: \"61610\"\r\n      - name: \"nebulous_ems_user\"\r\n        value: \"aaa\"\r\n      - name: \"nebulous_ems_password\"\r\n        value: \"111\"\r\n      - name: \"nebulous_ems_metrics_topic\"\r\n        value: \"/topic/RawProcessingLatency_SENSOR\"\r\n    traits:\r\n    - type: \"scaler\"\r\n      properties:\r\n        replicas: 1\r\n\r\n\r\n  policies:\r\n  - name: \"target-default\"\r\n    type: \"topology\"\r\n    properties:\r\n      namespace: \"default\"\r\n  workflow:\r\n    steps:\r\n    - name: \"deploy2default\"\r\n      type: \"deploy\"\r\n      properties:\r\n        policies:\r\n        - \"target-default\"",
+  "content": "{{APP_KUBEVELA}}",
   "variables": [
     {
       "key": "spec_components_0_traits_0_properties_replicas",
@@ -15,9 +15,11 @@
       }
     }
   ],
-  "environmentVariables": [],
+  "environmentVariables": [
+   
+  ],
   "resources": [
-    
+  
   ],
   "templates": [],
   "parameters": [],
@@ -58,7 +60,8 @@
       "arguments": [
         "RawProcessingLatency"
       ]
-    }
+    },
+    {"name":"currentcpu","type":"raw","sensor":{"type":"netdata k8s.cgroup.cpu","config":{}},"output":"all 10 sec"}
   ],
   "sloViolations": {
     "nodeKey": "5ce4273e-5ac3-478b-b460-075b053fb994",

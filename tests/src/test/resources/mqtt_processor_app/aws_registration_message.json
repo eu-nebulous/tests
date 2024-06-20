@@ -1,0 +1,6 @@
+{
+    "metaData": {
+        "userId": "admin"
+    },
+    "body": "[{\"cloudId\":\"{{CLOUD_ID}}\",\"cloudProviderName\":\"aws-ec2\",\"cloudType\":\"PUBLIC\",\"securityGroup\":\"{{SECURITY_GROUP}}\",\"subnet\":null,\"sshCredentials\":{\"username\":\"{{USER_NAME}}\",\"keyPairName\":\"{{KEY_PAIR_NAME}}\",\"privateKey\":\"{{PRIVATE_KEY}}\"},\"endpoint\":\"\",\"scope\":{\"prefix\":null,\"value\":null},\"identityVersion\":\"\",\"defaultNetwork\":\"\",\"credentials\":{\"user\":\"{{CREDENTIALS_USER}}\",\"secret\":\"{{CREDENTIALS_SECRET}}\",\"domain\":null},\"blacklist\":null}]"
+}
