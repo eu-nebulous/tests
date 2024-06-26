@@ -1,0 +1,6 @@
+FROM python:3.9
+WORKDIR /app
+COPY ./worker.py .
+COPY ./requirements-worker.txt ./requirements.txt
+RUN pip install --no-cache-dir --upgrade -r requirements.txt
+CMD ["python","-u","worker.py"]

@@ -158,7 +158,9 @@ class MQTTProcessorAppDeploymentTest {
 		envVars.add(Map.of("name","PRIVATE_DOCKER_REGISTRY_USERNAME","value",Optional.ofNullable(System.getenv("MQTT_APP_PRIVATE_DOCKER_REGISTRY_USERNAME")).orElseThrow(() -> new IllegalStateException("MQTT_APP_PRIVATE_DOCKER_REGISTRY_USERNAME env var is not defined")),"secret","false"));
 		envVars.add(Map.of("name","PRIVATE_DOCKER_REGISTRY_PASSWORD","value",Optional.ofNullable(System.getenv("MQTT_APP_PRIVATE_DOCKER_REGISTRY_PASSWORD")).orElseThrow(() -> new IllegalStateException("MQTT_APP_PRIVATE_DOCKER_REGISTRY_PASSWORD env var is not defined")),"secret","false"));
 		envVars.add(Map.of("name","PRIVATE_DOCKER_REGISTRY_EMAIL","value",Optional.ofNullable(System.getenv("MQTT_APP_PRIVATE_DOCKER_REGISTRY_EMAIL")).orElseThrow(() -> new IllegalStateException("MQTT_APP_PRIVATE_DOCKER_REGISTRY_EMAIL env var is not defined")),"secret","false"));
-
+		envVars.add(Map.of("name","ONM_URL","value","http://158.37.63.36:8082"));
+		
+		
 		LOGGER.info(om.writerWithDefaultPrettyPrinter().writeValueAsString(appCreationPayload));
 		coreBroker.sendAppCreationMessage(appCreationPayload, applicationId);
 
