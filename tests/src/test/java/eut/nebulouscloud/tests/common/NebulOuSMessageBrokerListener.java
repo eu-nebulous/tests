@@ -34,7 +34,7 @@ public class NebulOuSMessageBrokerListener {
 	final String brokerUser = Optional.ofNullable(System.getenv("NEBULOUS_BROKER_USER")).orElseThrow(() -> new IllegalStateException("NEBULOUS_BROKER_USER env var is not defined"));
 	final String brokerPassword = Optional.ofNullable(System.getenv("NEBULOUS_BROKER_PASSWORD")).orElseThrow(() -> new IllegalStateException("NEBULOUS_BROKER_PASSWORD env var is not defined"));
 	
-	final String APP_ID ="0918402606rest-processor-app1719386320641";
+	final String APP_ID = null;//"0918402606rest-processor-app1719386320641";
 	
 	protected ObjectMapper om = new ObjectMapper();
 

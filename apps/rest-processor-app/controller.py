@@ -17,23 +17,16 @@ import logging
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
-file_handler = logging.FileHandler('rest_processor_app.log', encoding='utf-8')
-file_handler.setLevel(logging.DEBUG)
-formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
-file_handler.setFormatter(formatter)
-
-class ExcludeWatchfilesFilter(logging.Filter):
-    def filter(self, record):
-        return not record.name.startswith('watchfiles')
-    
-file_handler.addFilter(ExcludeWatchfilesFilter())
-logger.addHandler(file_handler)
+handler = logging.StreamHandler(sys.stdout)
+handler.setLevel(logging.DEBUG)
+formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+handler.setFormatter(formatter)
+logger.addHandler(handler)
 
 
 report_metrics_to_ems = os.getenv("report_metrics_to_ems","False")
 stomp_broker_address = os.getenv("nebulous_ems_ip")
 stomp_port = int(os.getenv("nebulous_ems_port",0))
-stomp_destination = os.getenv("nebulous_ems_metrics_topic")
 stomp_user = os.getenv("nebulous_ems_user")
 stomp_pass = os.getenv("nebulous_ems_password")
 stomp_client = None
@@ -77,10 +70,34 @@ class PendingRequest():
         }
         return json.dumps(task_dict)
     
+class WorkerCountTracker:
+    def __init__(self):
+        self.workers_map = {}
+        self.lock = threading.Lock()
+        self.expiry_time = 10  # IDs older than 10 seconds will be removed
+        
+    def cleanup_expired_ids(self):
+        with self.lock:
+            current_time = time.time()
+            expired_workers = [id for id, last_time in self.workers_map.items() if current_time - last_time > self.expiry_time]
+            for id in expired_workers:
+                del self.workers_map[id]
 
+    def update_worker(self, id,expiry_time):
+        with self.lock:
+            logger.debug("Set worker {} expiry to {}".format(id,expiry_time))
+            self.workers_map[id] = expiry_time
 
-
+    def get_workers(self):
+        with self.lock:
+            return list(self.workers_map.keys())
+workerTracker = WorkerCountTracker()
+#time.time()
 def report_metrics():
+
+    #
+    # Report on RawMaxMessageAge
+    #
     max_age = -1
     try:
         max_age = time.time() - list(pending_requests.queue)[0].reception_time
@@ -91,10 +108,47 @@ def report_metrics():
         "level": 1,
         "timestamp": int(datetime.datetime.now().timestamp())
     }
-    logger.info(json.dumps(json_msg))
-    stomp_client.send(body=json.dumps(json_msg), headers={'type':'textMessage', 'amq-msg-type':'text'}, destination=stomp_destination)
+    logger.info("RawMaxMessageAge: "+json.dumps(json_msg))
+    stomp_client.send(body=json.dumps(json_msg), headers={'type':'textMessage', 'amq-msg-type':'text'}, destination="/topic/RawMaxMessageAge_SENSOR")
+    
+    #
+    # Report on NumWorkers
+    #
+    workerTracker.cleanup_expired_ids()
+    num_workers = len(workerTracker.get_workers())
+    json_msg = {
+        "metricValue": num_workers,
+        "level": 1,
+        "timestamp": int(datetime.datetime.now().timestamp())
+    }
+    logger.info("NumWorkers_SENSOR: "+json.dumps(json_msg))
+    stomp_client.send(body=json.dumps(json_msg), headers={'type':'textMessage', 'amq-msg-type':'text'}, destination="/topic/NumWorkers_SENSOR")
+    
+    #
+    # Report on NumPendingRequests
+    #   
+    num_requests = len(list(pending_requests.queue))
+    json_msg = {
+        "metricValue": num_requests,
+        "level": 1,
+        "timestamp": int(datetime.datetime.now().timestamp())
+    }
+    logger.info("NumPendingRequests_SENSOR: "+json.dumps(json_msg))
+    stomp_client.send(body=json.dumps(json_msg), headers={'type':'textMessage', 'amq-msg-type':'text'}, destination="/topic/NumPendingRequests_SENSOR")    
 
-
+    #
+    # Report on AccumulatedSecondsPendingRequests
+    #      
+    total_queue_length = sum(list([req.t for req in list(pending_requests.queue)]))
+    json_msg = {
+        "metricValue": total_queue_length,
+        "level": 1,
+        "timestamp": int(datetime.datetime.now().timestamp())
+    }
+    logger.info("AccumulatedSecondsPendingRequests_SENSOR: "+json.dumps(json_msg))  
+    stomp_client.send(body=json.dumps(json_msg), headers={'type':'textMessage', 'amq-msg-type':'text'}, destination="/topic/AccumulatedSecondsPendingRequests_SENSOR")    
+        
+    
 def report_metrics_process():
     logger.info("Start report_metrics_process")
     while True:
@@ -126,9 +180,9 @@ async def startup_event():
     if "True" == report_metrics_to_ems:
         logger.info("Connecting to STOMP")
         try:
-            stomp_client = stomp.Connection12(host_and_ports=[(stomp_broker_address, stomp_port)])
-            stomp_client.set_listener('', stomp.PrintingListener())
-            stomp_client.connect(stomp_user, stomp_pass, wait=True)
+            #stomp_client = stomp.Connection12(host_and_ports=[(stomp_broker_address, stomp_port)])
+            #stomp_client.set_listener('', stomp.PrintingListener())
+            #stomp_client.connect(stomp_user, stomp_pass, wait=True)
             thread = threading.Thread(target=report_metrics_process)
             thread.daemon = True  
             thread.start()
@@ -253,8 +307,10 @@ async def accept(worker_id):
     lock.acquire()
     try:
         if(pending_requests.qsize()==0):
+            workerTracker.update_worker(worker_id,time.time()+workerTracker.expiry_time)
             return {"message": None}
-        pending_request = pending_requests.get(0)
+        pending_request = pending_requests.get(0)        
+        workerTracker.update_worker(worker_id,pending_request.t+time.time()+workerTracker.expiry_time)        
         logger.debug("Selected request: "+ str(pending_request))
         completed_request = pending_request.completedBy(worker_id)
         try:
