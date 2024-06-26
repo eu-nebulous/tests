@@ -5,6 +5,8 @@ services:
     build: 
       context: .
       dockerfile: ./Dockerfile-controller
+    environment:
+      - report_metrics_to_ems=False 
     ports:
       - 8000:8000
   worker:

@@ -9,6 +9,19 @@ The controller is an API implemented with FastAPI, featuring three endpoints:
 * The "POST /accept" endpoint removes the oldest element from the "pending requests" queue, which ideally will be consumed by the worker, and added to the controller's "completed requests" queue.
 * The "GET /" endpoint displays the two queues and their requests in HTML format. The "pending requests" queue is sorted from oldest to youngest, while the "completed requests" queue is sorted from youngest to oldest, with a maximum of one hundred requests stored.
 
+
+# Metrics
+If env `report_metrics_to_ems` is set to True, the app controller periodically reports the following metrics to EMS:
+
+- RawMaxMessageAge_SENSOR: The age of the oldest message in the queue.
+
+- NumWorkers_SENSOR: The number of workers that are active. A worker is considered active if it has contacted the controller in the last 5 seconds or after the duration of the last work sent to the worker + 5 seconds 
+
+- NumPendingRequests_SENSOR: The number of requests on the queue.
+
+- AccumulatedSecondsPendingRequests_SENSOR: The accumulated duration of the requests in the pending queue.
+
+
 # Worker
 
 The worker consumes requests from the controller's "pending requests" queue via the "POST /accept" endpoint. Upon receiving a request, the worker sleeps for the duration received in the request (in seconds) until the queue is empty and receives a "null" response from the controller.
