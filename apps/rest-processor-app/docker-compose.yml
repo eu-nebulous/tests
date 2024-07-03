@@ -1,0 +1,21 @@
+services:
+  controller:
+    image: ems-nevulous/controller
+    hostname: controller
+    build: 
+      context: .
+      dockerfile: ./Dockerfile-controller
+    environment:
+      - report_metrics_to_ems=False 
+    ports:
+      - 8000:8000
+  worker:
+    image: ems-nevulous/worker
+    build: 
+      context: .
+      dockerfile: ./Dockerfile-worker
+    environment:
+      - API_ADDRESS=http://controller:8000
+    deploy:
+      mode: replicated  
+      replicas: 1

@@ -10,7 +10,7 @@
       "type": "float",
       "meaning": "replicas",
       "value": {
-        "lower_bound": 1,
+        "lower_bound": 2,
         "higher_bound": 5
       }
     }

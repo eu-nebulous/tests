@@ -1,6 +1,7 @@
 package eut.nebulouscloud.tests.common;
 
 import java.io.IOException;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -29,13 +30,15 @@ public class NebulOuSMessageBrokerListener {
 	static Logger LOGGER = LoggerFactory.getLogger(NebulOuSMessageBrokerListener.class);
 
 	private static NebulOuSMessageBrokerListener instance;
-	final String brokerHost = Optional.ofNullable(System.getenv("NEBULOUS_BROKER_HOST")).orElse("localhost"); 
-	final int brokerPort = Integer.parseInt(Optional.ofNullable(System.getenv("NEBULOUS_BROKER_PORT")).orElse("5672")); 
-	final String brokerUser = Optional.ofNullable(System.getenv("NEBULOUS_BROKER_USER")).orElseThrow(() -> new IllegalStateException("NEBULOUS_BROKER_USER env var is not defined"));
-	final String brokerPassword = Optional.ofNullable(System.getenv("NEBULOUS_BROKER_PASSWORD")).orElseThrow(() -> new IllegalStateException("NEBULOUS_BROKER_PASSWORD env var is not defined"));
-	
-		
-	
+	final String brokerHost = Optional.ofNullable(System.getenv("NEBULOUS_BROKER_HOST")).orElse("localhost");
+	final int brokerPort = Integer.parseInt(Optional.ofNullable(System.getenv("NEBULOUS_BROKER_PORT")).orElse("5672"));
+	final String brokerUser = Optional.ofNullable(System.getenv("NEBULOUS_BROKER_USER"))
+			.orElseThrow(() -> new IllegalStateException("NEBULOUS_BROKER_USER env var is not defined"));
+	final String brokerPassword = Optional.ofNullable(System.getenv("NEBULOUS_BROKER_PASSWORD"))
+			.orElseThrow(() -> new IllegalStateException("NEBULOUS_BROKER_PASSWORD env var is not defined"));
+
+	final String APP_ID = null;//"1439152706rest-processor-app1719491955446";
+
 	protected ObjectMapper om = new ObjectMapper();
 
 	private Connector myEXNClient;
@@ -63,20 +66,35 @@ public class NebulOuSMessageBrokerListener {
 				// TODO Auto-generated catch block
 				e.printStackTrace();
 			}
-
-			LOGGER.info("\r\n{}\r\nsubject:{}\r\npayload:{}\r\nproperties:{}", to, subject, body, props);
+			
+			
+			if(APP_ID!=null && !APP_ID.isEmpty() && !APP_ID.equals(subject)) return;
+			
+			Object correlationId = 0;
 			try {
-				LOGGER.info(om.writeValueAsString(body));
-			} catch (JsonProcessingException e) {
+				correlationId = message.correlationId();
+			} catch (ClientException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+			String content = body.toString();
+			try{
+				content = om.writeValueAsString(body);
+			}
+			catch (JsonProcessingException e) {
+			}
+
+			LOGGER.info("\r\n{}\r\nsubject:{}\r\nproperties:{}\r\ncorrelationId:{}\r\npayload:{}", to, subject,
+					props, correlationId,content);
+		}
+		
+	}
+
+		private class MyConnectorHandler extends ConnectorHandler {
+			public void onReady(AtomicReference<Context> context) {
+				LOGGER.info("Optimiser-controller connected to ActiveMQ");
 			}
 		}
-	}
-
-	private class MyConnectorHandler extends ConnectorHandler {
-		public void onReady(AtomicReference<Context> context) {
-			LOGGER.info("Optimiser-controller connected to ActiveMQ");
-		}
-	}
 
 	private NebulOuSMessageBrokerListener() {
 		Consumer cons1 = new Consumer("monitoring", "eu.nebulouscloud.>", new MyConsumerHandler(), true, true);
@@ -85,21 +103,21 @@ public class NebulOuSMessageBrokerListener {
 		myEXNClient.start();
 	}
 
-	public void stop() {
-		// myEXNClient.stop();
-		LOGGER.info("Ciao!");
-		System.exit(0);// Don't know how to stop properly....
-	}
+		public void stop() {
+			// myEXNClient.stop();
+			LOGGER.info("Ciao!");
+			System.exit(0);// Don't know how to stop properly....
+		}
 
-	public static void main(String[] args) throws StreamReadException, DatabindException, IOException {
-		NebulOuSMessageBrokerListener tester = new NebulOuSMessageBrokerListener();
+		public static void main(String[] args) throws StreamReadException, DatabindException, IOException {
+			NebulOuSMessageBrokerListener tester = new NebulOuSMessageBrokerListener();
 
-		while (true) {
-			try {
-				Thread.sleep(100);
-			} catch (InterruptedException e) {
+			while (true) {
+				try {
+					Thread.sleep(100);
+				} catch (InterruptedException e) {
+				}
 			}
 		}
-	}
 
 }

@@ -32,17 +32,17 @@ spec:
           fieldRef:
             fieldPath: status.hostIP
       - name: "nebulous_ems_port"
-        value: "61610"
+        value: "{{APP_EMS_PORT}}"
       - name: "nebulous_ems_user"
-        value: "aaa"
+        value: "{{APP_EMS_USER}}"
       - name: "nebulous_ems_password"
-        value: "111"
+        value: "{{APP_EMS_PASSWORD}}"
       - name: "nebulous_ems_metrics_topic"
-        value: "RawProcessingLatency_SENSOR"
+        value: "/topic/RawProcessingLatency_SENSOR"
     traits:
     - type: "scaler"
       properties:
-        replicas: 1
+        replicas: 2
 
 
   policies:
