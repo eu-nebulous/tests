@@ -1,0 +1,59 @@
+apiVersion: "core.oam.dev/v1beta1"
+kind: "Application"
+metadata:
+  name: "{{APP_ID}}"
+spec:
+  components:
+  - name: "dummy-app-worker"
+    type: "webservice"
+    properties:
+      image: "docker.io/rsprat/mytestrepo:v1"
+      cpu: "{{APP_CPU}}"
+      memory: "{{APP_RAM}}"
+      imagePullPolicy: "Always"
+      imagePullSecrets: ["regcred"]
+      cmd:
+      - "python"
+      - "-u"
+      - "worker.py"
+      env:
+      - name: "mqtt_ip"
+        value: "{{APP_MQTT_BROKER_SERVER}}"
+      - name: "mqtt_port"
+        value: "{{APP_MQTT_BROKER_PORT}}"
+      - name: "mqtt_subscribe_topic"
+        value: "{{APP_MQTT_INPUT_TOPIC}}"
+      - name: "mqtt_publish_topic"
+        value: "{{APP_MQTT_OUTPUT_TOPIC}}"
+      - name: "report_metrics_to_ems"
+        value: "{{REPORT_METRICS_TO_EMS}}"
+      - name: "nebulous_ems_ip"
+        valueFrom:
+          fieldRef:
+            fieldPath: status.hostIP
+      - name: "nebulous_ems_port"
+        value: "{{APP_EMS_PORT}}"
+      - name: "nebulous_ems_user"
+        value: "{{APP_EMS_USER}}"
+      - name: "nebulous_ems_password"
+        value: "{{APP_EMS_PASSWORD}}"
+      - name: "nebulous_ems_metrics_topic"
+        value: "/topic/RawProcessingLatency_SENSOR"
+    traits:
+    - type: "scaler"
+      properties:
+        replicas: 2
+
+
+  policies:
+  - name: "target-default"
+    type: "topology"
+    properties:
+      namespace: "default"
+  workflow:
+    steps:
+    - name: "deploy2default"
+      type: "deploy"
+      properties:
+        policies:
+        - "target-default"

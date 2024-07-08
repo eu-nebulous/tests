@@ -1,0 +1,30 @@
+quarkus:
+  qpid-jms:
+    url: 'amqp://localhost:5672'
+    username: 'nebulous'
+    password: 'admin'
+
+jms:
+  topic:
+    mock:
+      inbound: 'jms.todo.inbound'
+      report: 'jms.todo.report'
+
+sal:
+  api:
+    url: '${SAL_API_URL:http://localhost:8080}'
+    username: '${SAL_API_USER}'
+    password: '${SAL_API_USER}'
+
+app:
+  ems:
+    username: '${APP_EMS_USER}'
+    password: '${APP_EMS_PASSWORD}'
+
+docker:
+  server: '${PRIVATE_DOCKER_REGISTRY_SERVER}'
+  username: '${PRIVATE_DOCKER_REGISTRY_USERNAME}'
+  password: '${PRIVATE_DOCKER_REGISTRY_PASSWORD}'
+  email: '${PRIVATE_DOCKER_REGISTRY_EMAIL}'
+
+onm_url: '${ONM_URL}'
