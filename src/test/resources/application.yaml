@@ -9,6 +9,9 @@ jms:
     mock:
       inbound: 'jms.todo.inbound'
       report: 'jms.todo.report'
+    nebulous:
+      optimiser: 'eu.nebulouscloud.ui.dsl.generic'
+
 
 sal:
   api:
