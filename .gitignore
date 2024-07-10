@@ -36,8 +36,15 @@ nb-configuration.xml
 *.orig
 *.rej
 
-# Local environment
-.env
 
 # Plugin directory
 /.quarkus/cli/plugins/
+
+
+# Local environment
+.env
+# Ignore ubi.example package
+src/main/java/ubi/example/
+src/test/java/ubi/example/
+# Ignore mocks directory under resources of test
+src/test/resources/mocks/

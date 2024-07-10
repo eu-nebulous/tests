@@ -13,11 +13,13 @@ import org.eclipse.microprofile.config.ConfigProvider;
 import org.jboss.logging.Logger;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.testng.Assert;
 import ubi.util.FileTemplatingUtils;
 
 import java.text.SimpleDateFormat;
 import java.util.*;
 
+import static org.citrusframework.actions.ReceiveMessageAction.Builder.receive;
 import static org.citrusframework.actions.SendMessageAction.Builder.send;
 import static org.citrusframework.dsl.JsonSupport.marshal;
 
@@ -42,6 +44,9 @@ public class AppDeploymentTest {
 
     @CitrusEndpoint
     private JmsEndpoint appCreationEndpoint;
+
+    @CitrusEndpoint
+    private JmsEndpoint metricModelEndpoint;
 
     @CitrusResource
     TestCaseRunner t;
@@ -94,7 +99,35 @@ public class AppDeploymentTest {
 
         t.when(send(appCreationEndpoint)
                 .message()
-                .header("applicationId", applicationId)
+                .header("application", applicationId)
                 .body(marshal(appCreationPayload)));
+
+
+        /**
+         * Send metric model and assert is correctly received by any subscriber
+         */
+        log.info("send metric model");
+        Map<String, Object> metricModelPayload = FileTemplatingUtils.loadJSONFileAndSubstitute("mqtt_processor_app/metric_model.json",
+                Map.of("{{APP_ID}}", applicationId));
+        log.info(objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(metricModelPayload));
+
+        t.when(send(metricModelEndpoint)
+                .message()
+                .header("application", applicationId)
+                .body(marshal(metricModelPayload)));
+
+
+
+        //TODO ENDPOINT TO BE CHANGED FOR OTHER CASES
+        t.then(receive(metricModelEndpoint)
+                .message()
+                .header("application", applicationId)
+                .validate((message, context) -> {
+                    // Only validate application headers
+                    Assert.assertEquals(message.getHeader("application"), applicationId);
+                }));
+
+
+
     }
 }

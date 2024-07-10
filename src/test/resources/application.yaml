@@ -11,6 +11,15 @@ jms:
       report: 'jms.todo.report'
     nebulous:
       optimiser: 'eu.nebulouscloud.ui.dsl.generic'
+      metric_model: 'eu.nebulouscloud.ui.dsl.metric_model'
+      evaluator: 'eu.nebulouscloud.optimiser.utilityevaluator.performanceindicators'
+      node_canditates_request_cfsb: 'eu.nebulouscloud.cfsb.get_node_candidates'
+      node_canditates_request_sal: 'eu.nebulouscloud.exn.sal.nodecandidate.get'
+      node_canditates_reply_sal: 'eu.nebulouscloud.exn.sal.nodecandidate.get.reply'
+      node_canditates_reply_cfsb: 'eu.nebulouscloud.cfsb.get_node_candidates.reply'
+      optimiser_define_cluster: 'eu.nebulouscloud.exn.sal.cluster.define'
+      optimiser_deploy_cluster: 'eu.nebulouscloud.exn.sal.cluster.define'
+#      optimiser_deploy_cluster: 'eu.nebulouscloud.exn.sal.cluster.define'
 
 
 sal:
