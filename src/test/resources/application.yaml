@@ -18,8 +18,8 @@ jms:
       node_canditates_reply_sal: 'eu.nebulouscloud.exn.sal.nodecandidate.get.reply'
       node_canditates_reply_cfsb: 'eu.nebulouscloud.cfsb.get_node_candidates.reply'
       optimiser_define_cluster: 'eu.nebulouscloud.exn.sal.cluster.define'
-      optimiser_deploy_cluster: 'eu.nebulouscloud.exn.sal.cluster.define'
-#      optimiser_deploy_cluster: 'eu.nebulouscloud.exn.sal.cluster.define'
+      optimiser_deploy_cluster: 'eu.nebulouscloud.exn.sal.cluster.deploy'
+#      optimiser_deploy_cluster: 'eu.nebulouscloud.exn.sal.cluster.deploy'
 
 
 sal:
