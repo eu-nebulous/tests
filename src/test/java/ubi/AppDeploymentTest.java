@@ -48,6 +48,10 @@ public class AppDeploymentTest {
     @CitrusEndpoint
     private JmsEndpoint metricModelEndpoint;
 
+
+    @CitrusEndpoint
+    private JmsEndpoint evaluatorEndpoint;
+
     @CitrusResource
     TestCaseRunner t;
 
@@ -116,16 +120,31 @@ public class AppDeploymentTest {
                 .header("application", applicationId)
                 .body(marshal(metricModelPayload)));
 
-
-
-        //TODO ENDPOINT TO BE CHANGED FOR OTHER CASES
         t.then(receive(metricModelEndpoint)
                 .message()
                 .header("application", applicationId)
-                .validate((message, context) -> {
-                    // Only validate application headers
-                    Assert.assertEquals(message.getHeader("application"), applicationId);
-                }));
+        );
+
+
+//        t.then(receive(appCreationEndpoint)
+//                .timeout(10 * 1000L)
+//                .header("application", applicationId)
+//                .validate((message, context) -> {
+//                    // Additional validation logic
+//                    if (predicate != null) {
+//                        NebulOuSCoreMessage coreMessage = new NebulOuSCoreMessage(new Date(), topic, message.getPayload(Map.class), applicationId, "");
+//                        assertTrue(predicate.test(coreMessage));
+//                    }
+//                }));
+
+//        //TODO ENDPOINT TO BE CHANGED FOR OTHER CASES
+//        t.then(receive(metricModelEndpoint)
+//                .message()
+//                .header("application", applicationId)
+//                .validate((message, context) -> {
+//                    // Only validate application headers
+//                    Assert.assertEquals(message.getHeader("application"), applicationId);
+//                }));
 
 
 

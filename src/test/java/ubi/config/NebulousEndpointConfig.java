@@ -53,6 +53,7 @@ public class NebulousEndpointConfig {
                 .asynchronous()
                 .connectionFactory(connectionFactory)
                 .destination(appcreationDestination)
+                .pubSubDomain(true)
                 .build();
     }
 
@@ -65,6 +66,8 @@ public class NebulousEndpointConfig {
                 .asynchronous()
                 .connectionFactory(connectionFactory)
                 .destination(metricModelDestination)
+                .pubSubDomain(true)
+                .autoStart(true)
                 .build();
     }
 
@@ -77,6 +80,7 @@ public class NebulousEndpointConfig {
                 .asynchronous()
                 .connectionFactory(connectionFactory)
                 .destination(evaluatorDestination)
+                .pubSubDomain(true)
                 .build();
     }
 
@@ -89,6 +93,7 @@ public class NebulousEndpointConfig {
                 .asynchronous()
                 .connectionFactory(connectionFactory)
                 .destination(nodeCandidatesRequestCFSBDestination)
+                .pubSubDomain(true)
                 .build();
     }
 
@@ -101,6 +106,7 @@ public class NebulousEndpointConfig {
                 .asynchronous()
                 .connectionFactory(connectionFactory)
                 .destination(nodeCandidatesRequestSALDestination)
+                .pubSubDomain(true)
                 .build();
     }
 
@@ -113,6 +119,7 @@ public class NebulousEndpointConfig {
                 .asynchronous()
                 .connectionFactory(connectionFactory)
                 .destination(nodeCandidatesReplySALDestination)
+                .pubSubDomain(true)
                 .build();
     }
 
@@ -125,6 +132,7 @@ public class NebulousEndpointConfig {
                 .asynchronous()
                 .connectionFactory(connectionFactory)
                 .destination(nodeCandidatesReplyCFSBDestination)
+                .pubSubDomain(true)
                 .build();
     }
 
@@ -137,6 +145,7 @@ public class NebulousEndpointConfig {
                 .asynchronous()
                 .connectionFactory(connectionFactory)
                 .destination(defineClusterDestination)
+                .pubSubDomain(true)
                 .build();
     }
 
@@ -149,6 +158,7 @@ public class NebulousEndpointConfig {
                 .asynchronous()
                 .connectionFactory(connectionFactory)
                 .destination(deployClusterDestination)
+                .pubSubDomain(true)
                 .build();
     }
 }

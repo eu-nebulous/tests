@@ -1,14 +1,15 @@
 quarkus:
   qpid-jms:
     url: 'amqp://localhost:5672'
-    username: 'nebulous'
-    password: 'admin'
+    username: '${NEBULOUS_BROKER_USERNAME}:nebulous'
+    password: '${NEBULOUS_BROKER_PASSWORD}admin'
 
 jms:
   topic:
     mock:
       inbound: 'jms.todo.inbound'
       report: 'jms.todo.report'
+      map: 'jms.todo.map'
     nebulous:
       optimiser: 'eu.nebulouscloud.ui.dsl.generic'
       metric_model: 'eu.nebulouscloud.ui.dsl.metric_model'
