@@ -1,8 +1,7 @@
-quarkus:
-  qpid-jms:
-    url: 'amqp://localhost:5672'
-    username: '${NEBULOUS_BROKER_USERNAME}:nebulous'
-    password: '${NEBULOUS_BROKER_PASSWORD}admin'
+qpid-jms:
+  url: 'amqp://localhost:5672'
+  username: '${NEBULOUS_BROKER_USERNAME:admin}'
+  password: '${NEBULOUS_BROKER_PASSWORD:nebulous}'
 
 jms:
   topic:

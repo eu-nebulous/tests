@@ -1,97 +1,92 @@
 package ubi.example.tests;
 
-import io.quarkus.test.junit.QuarkusTest;
-import org.citrusframework.TestCaseRunner;
-import org.citrusframework.annotations.CitrusEndpoint;
-import org.citrusframework.annotations.CitrusResource;
+import org.citrusframework.annotations.CitrusTest;
 import org.citrusframework.jms.endpoint.JmsEndpoint;
-import org.citrusframework.quarkus.CitrusSupport;
-import org.junit.jupiter.api.Test;
-import org.citrusframework.testng.TestNGCitrusSupport;
-import org.springframework.test.context.ContextConfiguration;
-import org.testng.Assert;
-import ubi.example.config.EndpointConfig;
+import org.citrusframework.testng.spring.TestNGCitrusSpringSupport;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
+import org.testng.annotations.Test;
 
-import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
+import java.io.IOException;
 
-import static org.citrusframework.actions.ReceiveMessageAction.Builder.receive;
 import static org.citrusframework.actions.SendMessageAction.Builder.send;
-import static org.citrusframework.container.RepeatOnErrorUntilTrue.Builder.repeatOnError;
+import static org.citrusframework.actions.ReceiveMessageAction.Builder.receive;
+import static org.testng.AssertJUnit.assertEquals;
 
-@QuarkusTest
-@CitrusSupport
-//@ContextConfiguration(classes = {EndpointConfig.class})
-public class MyIntegrationTests extends TestNGCitrusSupport {
+public class MyIntegrationTests extends TestNGCitrusSpringSupport {
 
-    @CitrusEndpoint
+    @Autowired
+    @Qualifier("todoJmsEndpoint")
     private JmsEndpoint todoJmsEndpoint;
 
-    @CitrusEndpoint
+    @Autowired
+    @Qualifier("todoReportEndpoint")
     private JmsEndpoint todoReportEndpoint;
 
-    @CitrusResource
-    TestCaseRunner t;
-
     @Test
+    @CitrusTest
     public void testSendTodoMessage() throws IOException {
-
         String addTodoEntryPayload = new String(Files.readAllBytes(Paths.get("src/test/resources/mocks/addTodoEntry.json")));
 
-        t.when(send(todoJmsEndpoint)
+        $(send()
+                .endpoint(todoJmsEndpoint)
                 .message()
                 .header("_type", "JSONObject")
                 .body(addTodoEntryPayload));
-    }
-
-    @Test
-    public void testReceiveMessage() throws IOException {
-
-        String addTodoEntryPayload = new String(Files.readAllBytes(Paths.get("src/test/resources/mocks/addTodoEntry.json")));
-
-//        t.then(repeatOnError()
-//                        .condition((i, context) -> i > 25)
-//                        .autoSleep(500)
-//                        .actions(
-//                                receive(todoJmsEndpoint)
-//                                        .message()
-//                                        .timeout(1500L)
-//                                        .header("_type", "JSONObject")
-//                                        .body(addTodoEntryPayload)
-//                        ));
-        t.then(receive(todoJmsEndpoint)
-                .message()
-                        .timeout(1500L)
-                .header("_type", "JSONObject")
-                .body(addTodoEntryPayload));
-    }
-
-    @Test
-    public void testSendTodoReportMessage() throws IOException {
-
-        String addTodoEntryPayload = new String(Files.readAllBytes(Paths.get("src/test/resources/mocks/reportTodoEntryDone.json")));
-
-        t.when(send(todoReportEndpoint)
-                .message()
-                .header("_type", "JSONObject")
-                .body(addTodoEntryPayload));
-    }
-
-    @Test
-    public void testReceiveNoBodyMessage() throws IOException {
-
-        String addTodoEntryPayload = new String(Files.readAllBytes(Paths.get("src/test/resources/mocks/reportTodoEntryDone.json")));
 
 
-        t.then(receive(todoReportEndpoint)
+        $(receive()
+                .endpoint(todoJmsEndpoint)
                 .message()
                 .header("_type", "JSONObject")
                 .validate((message, context) -> {
                     // Only validate headers
-                    Assert.assertEquals(message.getHeader("_type"), "JSONObject");
+                    assertEquals(message.getHeader("_type"), "JSONObject");
                     // Ignore body
                 }));
-    }
-}
 
+
+    }
+
+//    @Test
+//    @CitrusTest
+//    public void testReceiveMessage() throws IOException {
+//        String addTodoEntryPayload = new String(Files.readAllBytes(Paths.get("src/test/resources/mocks/addTodoEntry.json")));
+//
+//        $(receive()
+//                .endpoint(todoJmsEndpoint)
+//                .message()
+//                .header("_type", "JSONObject")
+//                .body(addTodoEntryPayload));
+//    }
+//
+//    @Test
+//    @CitrusTest
+//    public void testSendTodoReportMessage() throws IOException {
+//        String reportTodoEntryDonePayload = new String(Files.readAllBytes(Paths.get("src/test/resources/mocks/reportTodoEntryDone.json")));
+//
+//        $(send()
+//                .endpoint(todoReportEndpoint)
+//                .message()
+//                .header("_type", "JSONObject")
+//                .body(reportTodoEntryDonePayload));
+//    }
+//
+//    @Test
+//    @CitrusTest
+//    public void testReceiveNoBodyMessage() throws IOException {
+//        String reportTodoEntryDonePayload = new String(Files.readAllBytes(Paths.get("src/test/resources/mocks/reportTodoEntryDone.json")));
+//
+//        $(receive()
+//                .endpoint(todoReportEndpoint)
+//                .message()
+//                .header("_type", "JSONObject")
+//                .validate((message, context) -> {
+//                    // Only validate headers
+//                    assertEquals(message.getHeader("_type"), "JSONObject");
+//                    // Ignore body
+//                }));
+//    }
+}
