@@ -5,7 +5,9 @@ import org.citrusframework.jms.endpoint.JmsEndpoint;
 import org.citrusframework.testng.spring.TestNGCitrusSpringSupport;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.test.context.ContextConfiguration;
 import org.testng.annotations.Test;
+import ubi.example.config.EndpointConfig;
 
 import java.nio.file.Files;
 import java.nio.file.Paths;
@@ -15,6 +17,7 @@ import static org.citrusframework.actions.SendMessageAction.Builder.send;
 import static org.citrusframework.actions.ReceiveMessageAction.Builder.receive;
 import static org.testng.AssertJUnit.assertEquals;
 
+@ContextConfiguration(classes = {EndpointConfig.class})
 public class MyIntegrationTests extends TestNGCitrusSpringSupport {
 
     @Autowired

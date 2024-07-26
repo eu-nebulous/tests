@@ -31,7 +31,6 @@ public class EndpointConfig {
                 .destination(inboundDestination)
                 .pubSubDomain(true)
                 .autoStart(true)
-                .timeout(10000)
                 .build();
     }
 
@@ -45,7 +44,6 @@ public class EndpointConfig {
                 .connectionFactory(connectionFactory)
                 .destination(reportDestination)
                 .pubSubDomain(true)
-                .timeout(10000)
                 .build();
     }
 }
