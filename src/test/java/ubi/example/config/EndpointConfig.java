@@ -29,8 +29,6 @@ public class EndpointConfig {
                 .asynchronous()
                 .connectionFactory(connectionFactory)
                 .destination(inboundDestination)
-                .pubSubDomain(true)
-                .autoStart(true)
                 .build();
     }
 
@@ -43,7 +41,6 @@ public class EndpointConfig {
                 .asynchronous()
                 .connectionFactory(connectionFactory)
                 .destination(reportDestination)
-                .pubSubDomain(true)
                 .build();
     }
 }
