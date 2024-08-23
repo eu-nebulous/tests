@@ -1,5 +1,7 @@
 qpid-jms:
   url: 'amqp://localhost:5672'
+  address: 'localhost'
+  port: 5672
   username: '${NEBULOUS_BROKER_USERNAME:admin}'
   password: '${NEBULOUS_BROKER_PASSWORD:nebulous}'
 
@@ -40,3 +42,10 @@ docker:
   email: '${PRIVATE_DOCKER_REGISTRY_EMAIL}'
 
 onm_url: '${ONM_URL}'
+
+cloud_resources:
+  uuid: '${CLOUD_RESOURCES_UUID:c9a625c7-f705-4128-948f-6b5765509029}'
+  title: '${CLOUD_RESOURCES_TITLE:blah}'
+  platform: '${CLOUD_RESOURCES_PLATFORM:AWS}'
+  enabled: '${CLOUD_RESOURCES_ENABLED:true}'
+  regions: '${CLOUD_RESOURCES_REGIONS:us-east-1}'

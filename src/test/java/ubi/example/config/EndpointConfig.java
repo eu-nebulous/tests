@@ -1,7 +1,7 @@
 package ubi.example.config;
 
 
-import config.TestConfig;
+import config.ConnectionConfig;
 import jakarta.jms.ConnectionFactory;
 import org.citrusframework.dsl.endpoint.CitrusEndpoints;
 import org.citrusframework.jms.endpoint.JmsEndpoint;
@@ -14,7 +14,7 @@ import org.springframework.jms.annotation.EnableJms;
 
 @Configuration
 @EnableJms
-@Import(TestConfig.class)
+@Import(ConnectionConfig.class)
 public class EndpointConfig {
 
     @Autowired

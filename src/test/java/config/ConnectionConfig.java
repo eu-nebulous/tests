@@ -9,7 +9,7 @@ import org.springframework.core.env.Environment;
 @Configuration
 @Import(EnvConfig.class)
 @PropertySource(value = "classpath:application.yaml", factory = YamlPropertySourceFactory.class)
-public class TestConfig {
+public class ConnectionConfig {
 
     @Autowired
     private Environment env;
