@@ -104,7 +104,7 @@ public class MyIntegrationTests extends TestNGCitrusSpringSupport {
                 .validate((message, context) -> {
                     // Only validate headers
 
-                    System.out.println(message.getPayload().toString());
+                    System.out.println(message);
                     // Ignore body
                 }));
     }

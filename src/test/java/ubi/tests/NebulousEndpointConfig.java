@@ -3,6 +3,8 @@ package ubi.tests;
 import config.ConnectionConfig;
 import jakarta.jms.ConnectionFactory;
 import org.citrusframework.dsl.endpoint.CitrusEndpoints;
+import org.citrusframework.http.client.HttpClient;
+import org.citrusframework.http.security.HttpAuthentication;
 import org.citrusframework.jms.endpoint.JmsEndpoint;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
@@ -133,6 +135,18 @@ public class NebulousEndpointConfig {
                 .destination(deployClusterDestination)
                 .pubSubDomain(true)
                 .autoStart(true)
+                .build();
+    }
+
+    @Bean
+    public HttpClient salEndpoint() {
+        return CitrusEndpoints
+                .http()
+                .client()
+                .requestUrl(env.getProperty("sal.api.url")+"/sal")
+                .authentication(HttpAuthentication.basic(
+                        env.getProperty("sal.api.username"),
+                        env.getProperty("sal.api.password")))
                 .build();
     }
 }
