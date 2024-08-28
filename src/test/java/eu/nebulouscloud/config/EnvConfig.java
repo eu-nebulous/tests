@@ -1,4 +1,4 @@
-package config;
+package eu.nebulouscloud.config;
 
 import io.github.cdimascio.dotenv.Dotenv;
 import org.springframework.context.annotation.Bean;

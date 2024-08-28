@@ -1,5 +1,6 @@
-package config;
+package eu.nebulouscloud.config;
 
+import eu.nebulouscloud.util.YamlPropertySourceFactory;
 import jakarta.jms.ConnectionFactory;
 import org.apache.qpid.jms.JmsConnectionFactory;
 import org.springframework.beans.factory.annotation.Autowired;

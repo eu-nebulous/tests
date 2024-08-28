@@ -1,4 +1,4 @@
-package exceptions;
+package eu.nebulouscloud.exceptions;
 
 public class MissingConfigValueException extends IllegalStateException{
     public MissingConfigValueException(String s) {

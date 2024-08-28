@@ -1,10 +1,12 @@
-package ubi.tests;
+package eu.nebulouscloud.test.automated.tests;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import exceptions.MissingConfigValueException;
-import model.SALAPIClient;
+import eu.nebulouscloud.model.Correlation;
+import eu.nebulouscloud.util.FileTemplatingUtils;
+import eu.nebulouscloud.exceptions.MissingConfigValueException;
+import eu.nebulouscloud.model.SALAPIClient;
 import org.apache.qpid.protonj2.client.*;
 import org.apache.qpid.protonj2.client.exceptions.ClientException;
 import org.citrusframework.annotations.CitrusTest;
@@ -18,7 +20,6 @@ import org.springframework.core.env.Environment;
 import org.springframework.http.HttpStatus;
 import org.springframework.test.context.ContextConfiguration;
 import org.testng.annotations.Test;
-import ubi.util.FileTemplatingUtils;
 
 import java.text.SimpleDateFormat;
 import java.util.*;
@@ -237,6 +238,7 @@ public class AppDeploymentTest extends TestNGCitrusSpringSupport {
          * Assert that Optimizer controller requests for node candidates for the
          * application cluster
          */
+        Correlation nodeRequestToCFSBcorId = new Correlation();
         logger.info("Wait for optimizer to request node candidates");
         $(receive(nodeCandidatesRequestCFSBEndpoint)
                 .message()
@@ -245,11 +247,13 @@ public class AppDeploymentTest extends TestNGCitrusSpringSupport {
                 .validate((message, context) -> {
                     // print debug message
                     logger.debug("Message to request candidates received");
+                    assertTrue(message.getHeader("citrus_jms_correlationId") != null);
+                    nodeRequestToCFSBcorId.setId(message.getHeader("citrus_jms_correlationId").toString());
                     // Ignore body
                 })
         );
 
-
+        Correlation nodeRequestToSALcorId = new Correlation();
         $(receive(nodeCandidatesRequestSALEndpoint)
                 .message()
                 .selector(selectorMap)
@@ -257,6 +261,8 @@ public class AppDeploymentTest extends TestNGCitrusSpringSupport {
                 .validate((message, context) -> {
                     // print debug message
                     logger.debug("Message to request candidates received from SAL");
+                    assertTrue(message.getHeader("citrus_jms_correlationId") != null);
+                    nodeRequestToSALcorId.setId(message.getHeader("citrus_jms_correlationId").toString());
                     // Ignore body
                 })
         );
@@ -272,6 +278,7 @@ public class AppDeploymentTest extends TestNGCitrusSpringSupport {
                 .validate((message, context) -> {
                     // print debug message
                     logger.debug("Message that CFSB receives an answer on node candidates from SAL , received");
+                    assertTrue(nodeRequestToSALcorId.getId().equals(message.getHeader("citrus_jms_correlationId").toString()));
                     // Ignore body
                 })
         );
@@ -288,6 +295,7 @@ public class AppDeploymentTest extends TestNGCitrusSpringSupport {
                 .validate((message, context) -> {
                     // print debug message
                     logger.debug("Message that optimizer receives an answer on node candidates from CFSB , received");
+                    assertTrue(nodeRequestToCFSBcorId.getId().equals(message.getHeader("citrus_jms_correlationId").toString()));
                     // Ignore body
                 })
         );
@@ -364,9 +372,9 @@ public class AppDeploymentTest extends TestNGCitrusSpringSupport {
     @CitrusTest
     public void singleEndpointTest()  {
 
-        JmsEndpoint endpoint = defineClusterEndpoint;
+        JmsEndpoint endpoint = appCreationEndpoint;
         Map<String, String> selectorMap = new HashMap<>();
-        selectorMap.put("application", "0207312608automated-testing-mqtt-app-1724627251238");
+        selectorMap.put("application", "0157592808automated-testing-mqtt-app-1724799479455");
 
         $(receive(endpoint)
                 .message()

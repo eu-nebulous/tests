@@ -1,4 +1,4 @@
-package config;
+package eu.nebulouscloud.util;
 
 import org.springframework.beans.factory.config.YamlPropertiesFactoryBean;
 import org.springframework.core.env.PropertiesPropertySource;

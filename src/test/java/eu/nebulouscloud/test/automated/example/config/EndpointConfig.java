@@ -1,7 +1,7 @@
-package ubi.example.config;
+package eu.nebulouscloud.test.automated.example.config;
 
 
-import config.ConnectionConfig;
+import eu.nebulouscloud.config.ConnectionConfig;
 import jakarta.jms.ConnectionFactory;
 import org.citrusframework.dsl.endpoint.CitrusEndpoints;
 import org.citrusframework.jms.endpoint.JmsEndpoint;

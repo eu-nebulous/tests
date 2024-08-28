@@ -1,4 +1,4 @@
-package model;
+package eu.nebulouscloud.model;
 
 public class SALAPIClient {
     private String sessionId;

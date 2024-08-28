@@ -1,15 +1,14 @@
-package ubi.example.tests;
+package eu.nebulouscloud.test.automated.example.tests;
 
+import eu.nebulouscloud.test.automated.example.config.EndpointConfig;
+import eu.nebulouscloud.util.FileTemplatingUtils;
 import org.citrusframework.annotations.CitrusTest;
 import org.citrusframework.jms.endpoint.JmsEndpoint;
-import org.citrusframework.message.MessageType;
 import org.citrusframework.testng.spring.TestNGCitrusSpringSupport;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.test.context.ContextConfiguration;
 import org.testng.annotations.Test;
-import ubi.example.config.EndpointConfig;
-import ubi.util.FileTemplatingUtils;
 
 import java.nio.file.Files;
 import java.nio.file.Paths;
@@ -89,7 +88,7 @@ public class MyIntegrationTests extends TestNGCitrusSpringSupport {
         String reportTodoEntryDonePayload = new String(Files.readAllBytes(Paths.get("src/test/resources/mocks/reportTodoEntryDone.json")));
 
         Map<String, Object> metricModelPayload = FileTemplatingUtils.loadJSONFileAndSubstitute("mqtt_processor_app/metric_model.json",
-                Map.of("{{APP_ID}}", "test"));
+                Map.of("{{APP_ID}}", "eu/nebulouscloud/test"));
 
         $(send()
                 .endpoint(todoReportEndpoint)
