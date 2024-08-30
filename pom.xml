@@ -90,49 +90,66 @@
     </build>
 
     <dependencies>
-
+        <!-- Dotenv Java: Loads environment variables from a `.env` file into the application -->
         <dependency>
             <groupId>io.github.cdimascio</groupId>
             <artifactId>dotenv-java</artifactId>
             <version>3.0.0</version>
         </dependency>
 
+        <!-- Gson: A library to convert Java objects to JSON and vice versa -->
+        <dependency>
+            <groupId>com.google.code.gson</groupId>
+            <artifactId>gson</artifactId>
+            <version>2.10.1</version>
+        </dependency>
+
+        <!-- Apache Qpid JMS Client: A JMS 2.0 client library for interacting with message brokers (e.g., ActiveMQ, RabbitMQ) using the AMQP protocol -->
         <dependency>
             <groupId>org.apache.qpid</groupId>
             <artifactId>qpid-jms-client</artifactId>
             <version>${qpid.version}</version>
         </dependency>
-        <!-- Apache Qpid ProtonJ2 -->
+
+        <!-- Apache Qpid ProtonJ2: A client library for AMQP 1.0 messaging, provides lightweight messaging support -->
         <dependency>
             <groupId>org.apache.qpid</groupId>
             <artifactId>protonj2-client</artifactId>
             <version>1.0.0-M16</version>
         </dependency>
 
-        <!-- Logging -->
+        <!-- SLF4J API: A facade for logging frameworks, allowing you to plug in any desired logging framework at deployment time -->
         <dependency>
             <groupId>org.slf4j</groupId>
             <artifactId>slf4j-api</artifactId>
             <version>${slf4j.version}</version>
         </dependency>
+
+        <!-- JCL over SLF4J: A bridge between the Jakarta Commons Logging (JCL) API and SLF4J for test logging purposes -->
         <dependency>
             <groupId>org.slf4j</groupId>
             <artifactId>jcl-over-slf4j</artifactId>
             <version>${slf4j.version}</version>
             <scope>test</scope>
         </dependency>
+
+        <!-- Apache Log4j API: The API for the Log4j logging framework, used in test scope -->
         <dependency>
             <groupId>org.apache.logging.log4j</groupId>
             <artifactId>log4j-api</artifactId>
             <version>${log4j2.version}</version>
             <scope>test</scope>
         </dependency>
+
+        <!-- Log4j to SLF4J Adapter: Allows Log4j 2 to be used with the SLF4J API, also in the test scope -->
         <dependency>
             <groupId>org.apache.logging.log4j</groupId>
             <artifactId>log4j-slf4j2-impl</artifactId>
             <version>${log4j2.version}</version>
             <scope>test</scope>
         </dependency>
+
+        <!-- Commons Logging: A logging framework used by older libraries, provided scope because SLF4J or Log4j is preferred -->
         <dependency>
             <groupId>commons-logging</groupId>
             <artifactId>commons-logging</artifactId>
@@ -140,7 +157,7 @@
             <scope>provided</scope>
         </dependency>
 
-        <!-- Spring Framework -->
+        <!-- Spring Framework - Spring Test: Provides classes and utilities to test Spring components -->
         <dependency>
             <groupId>org.springframework</groupId>
             <artifactId>spring-test</artifactId>
@@ -148,60 +165,79 @@
             <scope>provided</scope>
         </dependency>
 
-        <!-- Citrus -->
+        <!-- Citrus Framework Dependencies: Used for automated integration testing of messaging-based applications -->
+        <!-- Citrus Core Module: Base module for Citrus containing the core functionalities -->
         <dependency>
             <groupId>org.citrusframework</groupId>
             <artifactId>citrus-base</artifactId>
             <version>${citrus.version}</version>
             <scope>test</scope>
         </dependency>
+
+        <!-- Citrus Spring Integration: Enables integration of Citrus with the Spring Framework -->
         <dependency>
             <groupId>org.citrusframework</groupId>
             <artifactId>citrus-spring</artifactId>
             <version>${citrus.version}</version>
             <scope>test</scope>
         </dependency>
+
+        <!-- Citrus Endpoint Catalog: Provides predefined endpoints (e.g., HTTP, JMS) for easier configuration -->
         <dependency>
             <groupId>org.citrusframework</groupId>
             <artifactId>citrus-endpoint-catalog</artifactId>
             <version>${citrus.version}</version>
             <scope>test</scope>
         </dependency>
+
+        <!-- Citrus TestNG: Supports using TestNG framework for writing and running Citrus tests -->
         <dependency>
             <groupId>org.citrusframework</groupId>
             <artifactId>citrus-testng</artifactId>
             <version>${citrus.version}</version>
             <scope>test</scope>
         </dependency>
+
+        <!-- Citrus HTTP: Provides HTTP client and server support for Citrus -->
         <dependency>
             <groupId>org.citrusframework</groupId>
             <artifactId>citrus-http</artifactId>
             <version>${citrus.version}</version>
             <scope>test</scope>
         </dependency>
+
+        <!-- Citrus JMS: Provides JMS (Java Message Service) client and server support for Citrus -->
         <dependency>
             <groupId>org.citrusframework</groupId>
             <artifactId>citrus-jms</artifactId>
             <version>${citrus.version}</version>
             <scope>test</scope>
         </dependency>
+
+        <!-- Citrus XML Validation: Supports XML validation for Citrus tests -->
         <dependency>
             <groupId>org.citrusframework</groupId>
             <artifactId>citrus-validation-xml</artifactId>
             <version>${citrus.version}</version>
             <scope>test</scope>
         </dependency>
+
+        <!-- Citrus JSON Validation: Supports JSON validation for Citrus tests -->
         <dependency>
             <groupId>org.citrusframework</groupId>
             <artifactId>citrus-validation-json</artifactId>
             <version>${citrus.version}</version>
             <scope>test</scope>
         </dependency>
+
+        <!-- Citrus Text Validation: Supports plain text validation for Citrus tests -->
         <dependency>
             <groupId>org.citrusframework</groupId>
             <artifactId>citrus-validation-text</artifactId>
             <version>${citrus.version}</version>
             <scope>test</scope>
         </dependency>
+
     </dependencies>
+
 </project>

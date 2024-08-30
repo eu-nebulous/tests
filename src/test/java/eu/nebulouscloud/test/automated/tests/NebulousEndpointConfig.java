@@ -6,6 +6,9 @@ import org.citrusframework.dsl.endpoint.CitrusEndpoints;
 import org.citrusframework.http.client.HttpClient;
 import org.citrusframework.http.security.HttpAuthentication;
 import org.citrusframework.jms.endpoint.JmsEndpoint;
+import org.citrusframework.testng.spring.TestNGCitrusSpringSupport;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -18,13 +21,15 @@ import org.springframework.jms.annotation.EnableJms;
 @Import(ConnectionConfig.class)
 public class NebulousEndpointConfig {
 
+    static Logger logger = LoggerFactory.getLogger(NebulousEndpointConfig.class);
+
     @Autowired
     private Environment env;
 
     @Bean
     public JmsEndpoint appCreationEndpoint(ConnectionFactory connectionFactory) {
         String appcreationDestination = env.getProperty("jms.topic.nebulous.optimiser");
-        System.out.println("Inbound Destination: " + appcreationDestination);
+        logger.debug("Inbound Destination: " + appcreationDestination);
         return CitrusEndpoints.jms()
                 .asynchronous()
                 .connectionFactory(connectionFactory)
@@ -37,7 +42,7 @@ public class NebulousEndpointConfig {
     @Bean
     public JmsEndpoint metricModelEndpoint(ConnectionFactory connectionFactory) {
         String metricModelDestination = env.getProperty("jms.topic.nebulous.metric_model");
-        System.out.println("Inbound Destination: " + metricModelDestination);
+        logger.debug("Inbound Destination: " + metricModelDestination);
         return CitrusEndpoints.jms()
                 .asynchronous()
                 .connectionFactory(connectionFactory)
@@ -50,7 +55,7 @@ public class NebulousEndpointConfig {
     @Bean
     public JmsEndpoint evaluatorEndpoint(ConnectionFactory connectionFactory) {
         String evaluatorDestination = env.getProperty("jms.topic.nebulous.evaluator");
-        System.out.println("Inbound Destination: " + evaluatorDestination);
+        logger.debug("Inbound Destination: " + evaluatorDestination);
         return CitrusEndpoints.jms()
                 .asynchronous()
                 .connectionFactory(connectionFactory)
@@ -63,7 +68,7 @@ public class NebulousEndpointConfig {
     @Bean
     public JmsEndpoint nodeCandidatesRequestCFSBEndpoint(ConnectionFactory connectionFactory) {
         String nodeCandidatesRequestCFSBDestination = env.getProperty("jms.topic.nebulous.node_canditates_request_cfsb");
-        System.out.println("Inbound Destination: " + nodeCandidatesRequestCFSBDestination);
+        logger.debug("Inbound Destination: " + nodeCandidatesRequestCFSBDestination);
         return CitrusEndpoints.jms()
                 .asynchronous()
                 .connectionFactory(connectionFactory)
@@ -76,7 +81,7 @@ public class NebulousEndpointConfig {
     @Bean
     public JmsEndpoint nodeCandidatesRequestSALEndpoint(ConnectionFactory connectionFactory) {
         String nodeCandidatesRequestSALDestination = env.getProperty("jms.topic.nebulous.node_canditates_request_sal");
-        System.out.println("Inbound Destination: " + nodeCandidatesRequestSALDestination);
+        logger.debug("Inbound Destination: " + nodeCandidatesRequestSALDestination);
         return CitrusEndpoints.jms()
                 .asynchronous()
                 .connectionFactory(connectionFactory)
@@ -89,7 +94,7 @@ public class NebulousEndpointConfig {
     @Bean
     public JmsEndpoint nodeCandidatesReplySALEndpoint(ConnectionFactory connectionFactory) {
         String nodeCandidatesReplySALDestination = env.getProperty("jms.topic.nebulous.node_canditates_reply_sal");
-        System.out.println("Inbound Destination: " + nodeCandidatesReplySALDestination);
+        logger.debug("Inbound Destination: " + nodeCandidatesReplySALDestination);
         return CitrusEndpoints.jms()
                 .asynchronous()
                 .connectionFactory(connectionFactory)
@@ -102,7 +107,7 @@ public class NebulousEndpointConfig {
     @Bean
     public JmsEndpoint nodeCandidatesReplyCFSBEndpoint(ConnectionFactory connectionFactory) {
         String nodeCandidatesReplyCFSBDestination = env.getProperty("jms.topic.nebulous.node_canditates_reply_cfsb");
-        System.out.println("Inbound Destination: " + nodeCandidatesReplyCFSBDestination);
+        logger.debug("Inbound Destination: " + nodeCandidatesReplyCFSBDestination);
         return CitrusEndpoints.jms()
                 .asynchronous()
                 .connectionFactory(connectionFactory)
@@ -115,7 +120,7 @@ public class NebulousEndpointConfig {
     @Bean
     public JmsEndpoint defineClusterEndpoint(ConnectionFactory connectionFactory) {
         String defineClusterDestination = env.getProperty("jms.topic.nebulous.optimiser_define_cluster");
-        System.out.println("Inbound Destination: " + defineClusterDestination);
+        logger.debug("Inbound Destination: " + defineClusterDestination);
         return CitrusEndpoints.jms()
                 .asynchronous()
                 .connectionFactory(connectionFactory)
@@ -128,11 +133,24 @@ public class NebulousEndpointConfig {
     @Bean
     public JmsEndpoint deployClusterEndpoint(ConnectionFactory connectionFactory) {
         String deployClusterDestination = env.getProperty("jms.topic.nebulous.optimiser_deploy_cluster");
-        System.out.println("Inbound Destination: " + deployClusterDestination);
+        logger.debug("Inbound Destination: " + deployClusterDestination);
         return CitrusEndpoints.jms()
                 .asynchronous()
                 .connectionFactory(connectionFactory)
                 .destination(deployClusterDestination)
+                .pubSubDomain(true)
+                .autoStart(true)
+                .build();
+    }
+
+    @Bean
+    public JmsEndpoint appStatusEndpoint(ConnectionFactory connectionFactory) {
+        String appStatusDestination = env.getProperty("optimiser_controller_state");
+        logger.debug("Inbound Destination: " + appStatusDestination);
+        return CitrusEndpoints.jms()
+                .asynchronous()
+                .connectionFactory(connectionFactory)
+                .destination(appStatusDestination)
                 .pubSubDomain(true)
                 .autoStart(true)
                 .build();

@@ -3,10 +3,13 @@ package eu.nebulouscloud.test.automated.tests;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import eu.nebulouscloud.model.Correlation;
+import eu.nebulouscloud.exceptions.InvalidFormatException;
+import eu.nebulouscloud.model.CloudResources;
+import eu.nebulouscloud.model.NebulousCoreMessage;
 import eu.nebulouscloud.util.FileTemplatingUtils;
 import eu.nebulouscloud.exceptions.MissingConfigValueException;
 import eu.nebulouscloud.model.SALAPIClient;
+import eu.nebulouscloud.util.StringToMapParser;
 import org.apache.qpid.protonj2.client.*;
 import org.apache.qpid.protonj2.client.exceptions.ClientException;
 import org.citrusframework.annotations.CitrusTest;
@@ -23,6 +26,7 @@ import org.testng.annotations.Test;
 
 import java.text.SimpleDateFormat;
 import java.util.*;
+import java.util.stream.StreamSupport;
 
 import static org.citrusframework.actions.ReceiveMessageAction.Builder.receive;
 import static org.citrusframework.http.actions.HttpActionBuilder.http;
@@ -32,6 +36,9 @@ import static org.testng.Assert.assertTrue;
 public class AppDeploymentTest extends TestNGCitrusSpringSupport {
 
     private final ObjectMapper objectMapper = new ObjectMapper();
+
+    private final StringToMapParser parser = new StringToMapParser();
+
     static int DELAY_SECONDS = 3;
 
     String applicationId = new SimpleDateFormat("HHmmssddMM").format(new Date())
@@ -81,6 +88,10 @@ public class AppDeploymentTest extends TestNGCitrusSpringSupport {
     private JmsEndpoint deployClusterEndpoint;
 
     @Autowired
+    @Qualifier("appStatusEndpoint")
+    private JmsEndpoint appStatusEndpoint;
+
+    @Autowired
     @Qualifier("salEndpoint")
     private HttpClient salEndpoint;
 
@@ -110,19 +121,24 @@ public class AppDeploymentTest extends TestNGCitrusSpringSupport {
         appCreationPayload.put("content",
                 FileTemplatingUtils.loadFileAndSubstitute("mqtt_processor_app/kubevela.yaml", appParameters));
 
-        // Configure cloud id
         ArrayList<Object> resources = ((ArrayList<Object>) appCreationPayload.get("resources"));
         resources.clear();
 //        resources.add(Map.of("uuid", "aws-automated-testing", "title", "", "platform", "", "enabled", "true", "regions", "us-east-1"));
 //        resources.add(Map.of("uuid", "c9a625c7-f705-4128-948f-6b5765509029", "title", "blah", "platform", "AWS", "enabled", "true","regions","us-east-1"));
 //        resources.add(Map.of("uuid", "uio-openstack-optimizer", "title", "whatever", "platform", "whatever", "enabled", "true","regions","bgo"));
-        resources.add(Map.of(
-                "uuid", Optional.ofNullable(env.getProperty("cloud_resources.uuid")).orElseThrow(() ->new MissingConfigValueException("cloud_resources.uuid")),
-                "title", Optional.ofNullable(env.getProperty("cloud_resources.title")).orElseThrow(() ->new MissingConfigValueException("cloud_resources.title")),
-                "platform", Optional.ofNullable(env.getProperty("cloud_resources.platform")).orElseThrow(() ->new MissingConfigValueException("cloud_resources.platform")),
-                "enabled", Optional.ofNullable(env.getProperty("cloud_resources.enabled")).orElseThrow(() ->new MissingConfigValueException("cloud_resources.enabled")),
-                "regions",Optional.ofNullable(env.getProperty("cloud_resources.regions")).orElseThrow(() ->new MissingConfigValueException("cloud_resources.regions"))
-        ));
+
+        /**
+         * Config the cloud id
+         */
+        CloudResources cloudResource = new CloudResources(
+                Optional.ofNullable(env.getProperty("cloud_resources.uuid")).orElseThrow(() -> new MissingConfigValueException("cloud_resources.uuid")),
+                Optional.ofNullable(env.getProperty("cloud_resources.title")).orElseThrow(() -> new MissingConfigValueException("cloud_resources.title")),
+                Optional.ofNullable(env.getProperty("cloud_resources.platform")).orElseThrow(() -> new MissingConfigValueException("cloud_resources.platform")),
+                Optional.ofNullable(env.getProperty("cloud_resources.enabled")).orElseThrow(() -> new MissingConfigValueException("cloud_resources.enabled")),
+                Optional.ofNullable(env.getProperty("cloud_resources.regions")).orElseThrow(() -> new MissingConfigValueException("cloud_resources.regions"))
+        );
+        resources.add(cloudResource.toMap());
+
 
         // Configure docker registry
         envVars.add(Map.of("name", "PRIVATE_DOCKER_REGISTRY_SERVER", "value", Optional.ofNullable(env.getProperty("docker.server")).orElseThrow(() ->new MissingConfigValueException("docker.server")),"secret","false"));
@@ -133,7 +149,7 @@ public class AppDeploymentTest extends TestNGCitrusSpringSupport {
 
 
 
-        salConnectionAndCloudProvidersTest();
+        salConnectionAndCloudProvidersTest(cloudResource.getUuid());
 
         /**
          * Header Selectors for receiving published message
@@ -143,29 +159,10 @@ public class AppDeploymentTest extends TestNGCitrusSpringSupport {
 
         logger.info(objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(appCreationPayload));
 
-        sendMessage(appCreationPayload,env.getProperty("jms.topic.nebulous.optimiser"));
+        NebulousCoreMessage appCreationMessage = new NebulousCoreMessage(appCreationPayload,env.getProperty("jms.topic.nebulous.optimiser"));
+        sendMessage(appCreationMessage);
 
-        //citrus Implementation
-        //        $(send(appCreationEndpoint)
-//                .message()
-//                .header("application", applicationId)
-//                        .type(applicationId)
-////                .header("subject", applicationId)
-////                        .header("Content-Type", "application/json")
-////                .body(new MessagePayloadBuilder() {
-////                    @Override
-////                    public Object buildPayload(TestContext testContext) {
-////                        try {
-////                            return objectMapper.writeValueAsString(appCreationPayload);
-////                        } catch (JsonProcessingException e) {
-////                            throw new RuntimeException(e);
-////                        }
-////                    }
-////                })
-//                .body(appCreationPayload.toString())
 
-//                .body(appCreationPayload.toString())
-//        );
 
         $(receive(appCreationEndpoint)
                 .message()
@@ -187,26 +184,9 @@ public class AppDeploymentTest extends TestNGCitrusSpringSupport {
 
         logger.info(objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(metricModelPayload));
 
-        sendMessage(metricModelPayload,env.getProperty("jms.topic.nebulous.metric_model"));
+        NebulousCoreMessage metricModelMessage = new NebulousCoreMessage(metricModelPayload,env.getProperty("jms.topic.nebulous.metric_model"));
+        sendMessage(metricModelMessage);
 
-        //Citrus Implementation
-//        $(send(metricModelEndpoint)
-//                .message()
-//                .header("application", applicationId)
-//                .header("subject", applicationId)
-////                        .body(new MessagePayloadBuilder() {
-////                            @Override
-////                            public Object buildPayload(TestContext testContext) {
-////                                try {
-////                                    return objectMapper.writeValueAsString(metricModelPayload);
-////                                } catch (JsonProcessingException e) {
-////                                    throw new RuntimeException(e);
-////                                }
-////                            }
-////                        })
-//                .body(marshal(metricModelPayload,objectMapper))
-////                .body(metricModelPayload.toString())
-//        );
 
         $(receive(metricModelEndpoint)
                 .message()
@@ -238,7 +218,7 @@ public class AppDeploymentTest extends TestNGCitrusSpringSupport {
          * Assert that Optimizer controller requests for node candidates for the
          * application cluster
          */
-        Correlation nodeRequestToCFSBcorId = new Correlation();
+        NebulousCoreMessage nodeRequestToCFSBmessage = new NebulousCoreMessage();
         logger.info("Wait for optimizer to request node candidates");
         $(receive(nodeCandidatesRequestCFSBEndpoint)
                 .message()
@@ -248,12 +228,12 @@ public class AppDeploymentTest extends TestNGCitrusSpringSupport {
                     // print debug message
                     logger.debug("Message to request candidates received");
                     assertTrue(message.getHeader("citrus_jms_correlationId") != null);
-                    nodeRequestToCFSBcorId.setId(message.getHeader("citrus_jms_correlationId").toString());
+                    nodeRequestToCFSBmessage.setCorrelationId(message.getHeader("citrus_jms_correlationId").toString());
                     // Ignore body
                 })
         );
 
-        Correlation nodeRequestToSALcorId = new Correlation();
+        NebulousCoreMessage nodeRequestToSALmessage = new NebulousCoreMessage();
         $(receive(nodeCandidatesRequestSALEndpoint)
                 .message()
                 .selector(selectorMap)
@@ -262,7 +242,7 @@ public class AppDeploymentTest extends TestNGCitrusSpringSupport {
                     // print debug message
                     logger.debug("Message to request candidates received from SAL");
                     assertTrue(message.getHeader("citrus_jms_correlationId") != null);
-                    nodeRequestToSALcorId.setId(message.getHeader("citrus_jms_correlationId").toString());
+                    nodeRequestToSALmessage.setCorrelationId(message.getHeader("citrus_jms_correlationId").toString());
                     // Ignore body
                 })
         );
@@ -278,7 +258,7 @@ public class AppDeploymentTest extends TestNGCitrusSpringSupport {
                 .validate((message, context) -> {
                     // print debug message
                     logger.debug("Message that CFSB receives an answer on node candidates from SAL , received");
-                    assertTrue(nodeRequestToSALcorId.getId().equals(message.getHeader("citrus_jms_correlationId").toString()));
+                    assertTrue(nodeRequestToSALmessage.getCorrelationId().equals(message.getHeader("citrus_jms_correlationId").toString()));
                     // Ignore body
                 })
         );
@@ -295,7 +275,7 @@ public class AppDeploymentTest extends TestNGCitrusSpringSupport {
                 .validate((message, context) -> {
                     // print debug message
                     logger.debug("Message that optimizer receives an answer on node candidates from CFSB , received");
-                    assertTrue(nodeRequestToCFSBcorId.getId().equals(message.getHeader("citrus_jms_correlationId").toString()));
+                    assertTrue(nodeRequestToCFSBmessage.getCorrelationId().equals(message.getHeader("citrus_jms_correlationId").toString()));
                     // Ignore body
                 })
         );
@@ -303,6 +283,7 @@ public class AppDeploymentTest extends TestNGCitrusSpringSupport {
         /**
          * Wait for optimizer to define cluster
          */
+        NebulousCoreMessage defineCluster = new NebulousCoreMessage();
         logger.info("Wait for optimizer to define cluster");
         $(receive(defineClusterEndpoint)
                 .message()
@@ -311,10 +292,35 @@ public class AppDeploymentTest extends TestNGCitrusSpringSupport {
                 .validate((message, context) -> {
                     // print debug message
                     logger.debug("Message that optimizer defined the cluster received");
-                    logger.info(message.getPayload().toString());
+                    try {
+                        Map<String, Object> messageMap = parser.parseStringToMap(message.getPayload().toString());
+                        defineCluster.setPayload(messageMap);
+                    } catch (InvalidFormatException e) {
+                        logger.error("Failed to parse input: " + e.getMessage());
+                    }
                     // Ignore body
                 })
         );
+        String clusterName = null;
+        if (defineCluster.getPayload().containsKey("body")) {
+            Object bodyObject = defineCluster.getPayload().get("body");
+
+            if (bodyObject instanceof Map) {
+                Map<String, Object> bodyMap = (Map<String, Object>) bodyObject;
+                Object nameObject = bodyMap.get("name");
+
+                if (nameObject instanceof String name) {
+                    logger.info("Cluster name: " + name);
+                    clusterName = name;
+                } else {
+                    logger.error("Name is not a string.");
+                }
+            } else {
+                logger.error("Body is not a map.");
+            }
+        } else {
+            logger.error("Result does not contain 'body'.");
+        }
 
         /**
          * Assert that Optimiser deploys the cluster
@@ -327,18 +333,51 @@ public class AppDeploymentTest extends TestNGCitrusSpringSupport {
                 .validate((message, context) -> {
                     // print debug message
                     logger.debug("Message that optimizer deploys the cluster received");
+                    logger.info(message.getPayload().toString());
+                    // Ignore body
+                })
+        );
+//        logger.info("Wait for a message from optimizer controller to solver with the AMPL File");
+//        $(receive(deployClusterEndpoint)
+//                .message()
+//                .selector(selectorMap)
+//                .timeout(8000)
+//                .validate((message, context) -> {
+//                    // print debug message
+//                    logger.debug("Message that optimizer deploys the cluster received");
+//                    logger.info(message.getPayload().toString());
+//                    // Ignore body
+//                })
+//        );
+        //TODO check cluster status
+
+        /**
+         * Assert that App is ready and running
+         */
+        $(receive(appStatusEndpoint)
+                .message()
+                .selector(selectorMap)
+                .timeout(8000)
+                .validate((message, context) -> {
+                    // print debug message
+                    logger.debug("Message of app status");
+                    logger.info(message.getPayload().toString());
                     // Ignore body
                 })
         );
     }
 
-    public void sendMessage(Map<String, Object> content, String topic) throws Exception {
+    /**
+     * Send Map Payload as message to a destination topic
+     * Function uses qpid-protonj2 protocol to send the message
+     * @param nebulousCoreMessage the nebulous core message
+     */
+    public void sendMessage(NebulousCoreMessage nebulousCoreMessage) {
 
         String address = env.getProperty("qpid-jms.address");
-        Integer port = Integer.valueOf(env.getProperty("qpid-jms.port"));
+        int port = Integer.parseInt(env.getProperty("qpid-jms.port"));
         String username = env.getProperty("qpid-jms.username");
         String password = env.getProperty("qpid-jms.password");
-        topic = "topic://"+topic;
 
 
         Client client = Client.create();
@@ -350,9 +389,9 @@ public class AppDeploymentTest extends TestNGCitrusSpringSupport {
 
         try (Connection connection = client.connect(address, port, connectionOptions)) {
             // Create a sender to the specified topic
-            try (Sender sender = connection.openSender(topic)) {
+            try (Sender sender = connection.openSender(nebulousCoreMessage.getTopic())) {
 
-                Message<Map<String, Object>> message = Message.create(content);
+                Message<Map<String, Object>> message = Message.create(nebulousCoreMessage.getPayload());
 
                 // Set as message properties the applicationId
                 message.subject(applicationId);
@@ -360,12 +399,68 @@ public class AppDeploymentTest extends TestNGCitrusSpringSupport {
 
                 sender.send(message);
 
-                logger.debug("Message sent successfully to topic: " + topic);
+                logger.debug("Message sent successfully to topic: " + nebulousCoreMessage.getTopic());
             }
         } catch (ClientException e) {
             e.printStackTrace();
             throw new RuntimeException("Failed to send message", e);
         }
+    }
+
+    public void salConnectionAndCloudProvidersTest(String uuid){
+        /**
+         * Assert of SAL connection
+         */
+        $(http()
+                .client(salEndpoint)
+                .send()
+                .post("/pagateway/connect")
+                .message()
+        );
+        SALAPIClient salapiClient = new SALAPIClient();
+        $(http()
+                .client(salEndpoint)
+                .receive()
+                .response(HttpStatus.OK)
+                .message()
+                .validate((message, context) -> {
+                    // Print debug message
+                    logger.info("Sessionid: "+message.getPayload().toString());
+                    salapiClient.setSessionId(message.getPayload().toString());
+                })
+        );
+
+        $(http()
+                .client(salEndpoint)
+                .send()
+                .get("/cloud")
+                .message()
+                .type(MessageType.JSON)
+                .header("sessionid",salapiClient.getSessionId())
+        );
+
+        /**
+         * Assert that SAL has cloud provider registered
+         */
+        $(http()
+                .client(salEndpoint)
+                .receive()
+                .response(HttpStatus.OK)
+                .message()
+                .validate((message, context) -> {
+                    String payload = message.getPayload().toString();
+                    try {
+                        JsonNode jsonArray = objectMapper.readTree(payload);
+                        assertTrue(jsonArray.isArray() && !jsonArray.isEmpty(), "JSON array shouldn't be empty");
+                        boolean uuidExists = StreamSupport.stream(jsonArray.spliterator(), false)
+                                .anyMatch(node -> uuid.equals(node.get("cloudId").asText()));
+                        assertTrue(uuidExists, "The provided UUID does not exist in the array for any cloudId.");
+
+                    } catch (JsonProcessingException e) {
+                        throw new RuntimeException(e);
+                    }
+                })
+        );
     }
 
     @Test
@@ -411,58 +506,6 @@ public class AppDeploymentTest extends TestNGCitrusSpringSupport {
                         JsonNode jsonArray = objectMapper.readTree(payload);
                         assertTrue(jsonArray.isArray() && jsonArray.isEmpty(), "JSON array should be empty");
                         System.out.println(message.getPayload().toString());
-                    } catch (JsonProcessingException e) {
-                        throw new RuntimeException(e);
-                    }
-                })
-        );
-    }
-
-    public void salConnectionAndCloudProvidersTest(){
-        /**
-         * Assert of SAL connection
-         */
-        $(http()
-                .client(salEndpoint)
-                .send()
-                .post("/pagateway/connect")
-                .message()
-        );
-        SALAPIClient salapiClient = new SALAPIClient();
-        $(http()
-                .client(salEndpoint)
-                .receive()
-                .response(HttpStatus.OK)
-                .message()
-                .validate((message, context) -> {
-                    // Print debug message
-                    logger.info("Sessionid: "+message.getPayload().toString());
-                    salapiClient.setSessionId(message.getPayload().toString());
-                })
-        );
-
-        $(http()
-                .client(salEndpoint)
-                .send()
-                .get("/cloud")
-                .message()
-                .type(MessageType.JSON)
-                .header("sessionid",salapiClient.getSessionId())
-        );
-
-        /**
-         * Assert that SAL doesn't have any cloud provider registered
-         */
-        $(http()
-                .client(salEndpoint)
-                .receive()
-                .response(HttpStatus.OK)
-                .message()
-                .validate((message, context) -> {
-                    String payload = message.getPayload().toString();
-                    try {
-                        JsonNode jsonArray = objectMapper.readTree(payload);
-                        assertTrue(jsonArray.isArray() && jsonArray.isEmpty(), "JSON array should be empty");
                     } catch (JsonProcessingException e) {
                         throw new RuntimeException(e);
                     }

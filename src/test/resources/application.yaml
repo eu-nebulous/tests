@@ -21,6 +21,7 @@ jms:
       node_canditates_reply_cfsb: 'eu.nebulouscloud.cfsb.get_node_candidates.reply'
       optimiser_define_cluster: 'eu.nebulouscloud.exn.sal.cluster.define'
       optimiser_deploy_cluster: 'eu.nebulouscloud.exn.sal.cluster.deploy'
+      optimiser_controller_state: 'eu.nebulouscloud.optimiser.controller.app_state'
 #      optimiser_deploy_cluster: 'eu.nebulouscloud.exn.sal.cluster.deploy'
 
 
