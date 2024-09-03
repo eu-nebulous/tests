@@ -12,16 +12,26 @@ import eu.nebulouscloud.model.SALAPIClient;
 import eu.nebulouscloud.util.StringToMapParser;
 import org.apache.qpid.protonj2.client.*;
 import org.apache.qpid.protonj2.client.exceptions.ClientException;
+import org.citrusframework.TestCaseRunner;
+import org.citrusframework.TestCaseRunnerFactory;
 import org.citrusframework.annotations.CitrusTest;
+import org.citrusframework.context.TestContext;
+import org.citrusframework.context.TestContextFactory;
+import org.citrusframework.exceptions.ValidationException;
 import org.citrusframework.http.client.HttpClient;
 import org.citrusframework.jms.endpoint.JmsEndpoint;
 import org.citrusframework.message.MessageType;
+import org.citrusframework.messaging.SelectiveConsumer;
 import org.citrusframework.testng.spring.TestNGCitrusSpringSupport;
+import org.citrusframework.validation.MessageValidator;
+import org.citrusframework.validation.context.ValidationContext;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.core.env.Environment;
 import org.springframework.http.HttpStatus;
 import org.springframework.test.context.ContextConfiguration;
+import org.testng.Assert;
+import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 
 import java.text.SimpleDateFormat;
@@ -88,6 +98,10 @@ public class AppDeploymentTest extends TestNGCitrusSpringSupport {
     private JmsEndpoint deployClusterEndpoint;
 
     @Autowired
+    @Qualifier("getAMPLfileEndpoint")
+    private JmsEndpoint getAMPLfileEndpoint;
+
+    @Autowired
     @Qualifier("appStatusEndpoint")
     private JmsEndpoint appStatusEndpoint;
 
@@ -97,6 +111,29 @@ public class AppDeploymentTest extends TestNGCitrusSpringSupport {
 
     @Autowired
     private Environment env;
+
+    private TestContext context;
+
+    private TestCaseRunner t;
+
+
+    @BeforeMethod
+    public void createTestContext() {
+        context = TestContextFactory.newInstance().getObject();
+        t = TestCaseRunnerFactory.createRunner(context);
+
+        context.getMessageValidatorRegistry().addMessageValidator("simple", new MessageValidator<>() {
+            @Override
+            public void validateMessage(org.citrusframework.message.Message receivedMessage, org.citrusframework.message.Message controlMessage, TestContext context, List<ValidationContext> validationContexts) throws ValidationException {
+                Assert.assertEquals(receivedMessage.getPayload(), controlMessage.getPayload());
+            }
+
+            @Override
+            public boolean supportsMessageType(String messageType, org.citrusframework.message.Message message) {
+                return true;
+            }
+        });
+    }
 
     @Test
     @CitrusTest
@@ -169,11 +206,9 @@ public class AppDeploymentTest extends TestNGCitrusSpringSupport {
                 .selector(selectorMap)
                 .validate((message, context) -> {
                     // print debug message
-                    System.out.println(message);
                     logger.debug("appCreationPayload payload received");
                     // Ignore body
                 }));
-
 
         /**
          * Send metric model and assert is correctly received by any subscriber
@@ -197,7 +232,6 @@ public class AppDeploymentTest extends TestNGCitrusSpringSupport {
                     // Ignore body
                 })
         );
-
         /**
          * Wait for utility evaluator to start
          */
@@ -337,18 +371,18 @@ public class AppDeploymentTest extends TestNGCitrusSpringSupport {
                     // Ignore body
                 })
         );
-//        logger.info("Wait for a message from optimizer controller to solver with the AMPL File");
-//        $(receive(deployClusterEndpoint)
-//                .message()
-//                .selector(selectorMap)
-//                .timeout(8000)
-//                .validate((message, context) -> {
-//                    // print debug message
-//                    logger.debug("Message that optimizer deploys the cluster received");
-//                    logger.info(message.getPayload().toString());
-//                    // Ignore body
-//                })
-//        );
+        logger.info("Wait for a message from optimizer controller to solver with the AMPL File");
+        $(receive(getAMPLfileEndpoint)
+                .message()
+                .selector(selectorMap)
+                .timeout(8000)
+                .validate((message, context) -> {
+                    // print debug message
+                    logger.debug("Message that optimizer deploys the cluster received");
+                    logger.info(message.getPayload().toString());
+                    // Ignore body
+                })
+        );
         //TODO check cluster status
 
         /**
@@ -356,6 +390,7 @@ public class AppDeploymentTest extends TestNGCitrusSpringSupport {
          */
         $(receive(appStatusEndpoint)
                 .message()
+                .name("appStatus")
                 .selector(selectorMap)
                 .timeout(8000)
                 .validate((message, context) -> {
@@ -365,6 +400,23 @@ public class AppDeploymentTest extends TestNGCitrusSpringSupport {
                     // Ignore body
                 })
         );
+
+        //testing app status message
+        long timeout = new Date().getTime() + (100 * 1000);
+        do {
+            /**
+             * Check if app status is reported to be running
+             */
+            String messageString = context.getMessageStore().getMessage("appStatus").getPayload().toString();
+            System.out.println(messageString);
+
+            try {
+                Thread.sleep(10000);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+
+        } while (new Date().getTime() < timeout);
     }
 
     /**
@@ -407,6 +459,11 @@ public class AppDeploymentTest extends TestNGCitrusSpringSupport {
         }
     }
 
+    /**
+     * Creates and asserts connection with SAL
+     * Check whether there are cloud providers registered
+     * @param uuid Cloud id to be asserted that is registered in SAL
+     */
     public void salConnectionAndCloudProvidersTest(String uuid){
         /**
          * Assert of SAL connection
@@ -467,9 +524,9 @@ public class AppDeploymentTest extends TestNGCitrusSpringSupport {
     @CitrusTest
     public void singleEndpointTest()  {
 
-        JmsEndpoint endpoint = appCreationEndpoint;
+        JmsEndpoint endpoint = appStatusEndpoint;
         Map<String, String> selectorMap = new HashMap<>();
-        selectorMap.put("application", "0157592808automated-testing-mqtt-app-1724799479455");
+        selectorMap.put("application", "2118133008automated-testing-mqtt-app-1725041893407");
 
         $(receive(endpoint)
                 .message()
@@ -479,6 +536,7 @@ public class AppDeploymentTest extends TestNGCitrusSpringSupport {
                     // Print debug message
                     logger.debug("Testing endpoint");
                     // Ignore body
+                    System.out.println(message);
                 })
         );
     }

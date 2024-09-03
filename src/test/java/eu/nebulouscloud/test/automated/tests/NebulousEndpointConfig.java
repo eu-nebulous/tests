@@ -144,8 +144,21 @@ public class NebulousEndpointConfig {
     }
 
     @Bean
+    public JmsEndpoint getAMPLfileEndpoint(ConnectionFactory connectionFactory) {
+        String deployClusterDestination = env.getProperty("jms.topic.nebulous.optimiser_deploy_cluster");
+        logger.debug("Inbound Destination: " + deployClusterDestination);
+        return CitrusEndpoints.jms()
+                .asynchronous()
+                .connectionFactory(connectionFactory)
+                .destination(deployClusterDestination)
+                .pubSubDomain(true)
+                .autoStart(true)
+                .build();
+    }
+
+    @Bean
     public JmsEndpoint appStatusEndpoint(ConnectionFactory connectionFactory) {
-        String appStatusDestination = env.getProperty("optimiser_controller_state");
+        String appStatusDestination = env.getProperty("jms.topic.nebulous.optimiser_controller_state");
         logger.debug("Inbound Destination: " + appStatusDestination);
         return CitrusEndpoints.jms()
                 .asynchronous()
