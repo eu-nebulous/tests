@@ -45,8 +45,8 @@ docker:
 onm_url: '${ONM_URL}'
 
 cloud_resources:
-  uuid: '${CLOUD_RESOURCES_UUID:c9a625c7-f705-4128-948f-6b5765509029-2}'
-  title: '${CLOUD_RESOURCES_TITLE:blah}'
-  platform: '${CLOUD_RESOURCES_PLATFORM:AWS}'
-  enabled: '${CLOUD_RESOURCES_ENABLED:true}'
-  regions: '${CLOUD_RESOURCES_REGIONS:us-east-1}'
+  uuid: '${CLOUD_RESOURCES_UUID}'
+  title: '${CLOUD_RESOURCES_TITLE}'
+  platform: '${CLOUD_RESOURCES_PLATFORM}'
+  enabled: '${CLOUD_RESOURCES_ENABLED}'
+  regions: '${CLOUD_RESOURCES_REGIONS}'

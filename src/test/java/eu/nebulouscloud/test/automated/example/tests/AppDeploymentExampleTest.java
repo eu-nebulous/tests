@@ -47,7 +47,7 @@ import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertTrue;
 
 @ContextConfiguration(classes = {NebulousEndpointConfig.class})
-public class AppDeploymentTest extends TestNGCitrusSpringSupport {
+public class AppDeploymentExampleTest extends TestNGCitrusSpringSupport {
 
     private final ObjectMapper objectMapper = new ObjectMapper();
 
