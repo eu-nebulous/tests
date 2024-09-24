@@ -107,20 +107,20 @@ public class MyIntegrationTests extends TestNGCitrusSpringSupport {
                     // Ignore body
                 }));
     }
-//
-//    @Test
-//    @CitrusTest
-//    public void testReceiveNoBodyMessage() throws IOException {
-//        String reportTodoEntryDonePayload = new String(Files.readAllBytes(Paths.get("src/test/resources/mocks/reportTodoEntryDone.json")));
-//
-//        $(receive()
-//                .endpoint(todoReportEndpoint)
-//                .message()
-//                .header("_type", "JSONObject")
-//                .validate((message, context) -> {
-//                    // Only validate headers
-//                    assertEquals(message.getHeader("_type"), "JSONObject");
-//                    // Ignore body
-//                }));
-//    }
+
+    @Test
+    @CitrusTest
+    public void testReceiveNoBodyMessage() throws IOException {
+        String reportTodoEntryDonePayload = new String(Files.readAllBytes(Paths.get("src/test/resources/mocks/reportTodoEntryDone.json")));
+
+        $(receive()
+                .endpoint(todoReportEndpoint)
+                .message()
+                .header("_type", "JSONObject")
+                .validate((message, context) -> {
+                    // Only validate headers
+                    assertEquals(message.getHeader("_type"), "JSONObject");
+                    // Ignore body
+                }));
+    }
 }

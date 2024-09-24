@@ -22,7 +22,7 @@ jms:
       optimiser_define_cluster: 'eu.nebulouscloud.exn.sal.cluster.define'
       optimiser_deploy_cluster: 'eu.nebulouscloud.exn.sal.cluster.deploy'
       optimiser_controller_state: 'eu.nebulouscloud.optimiser.controller.app_state'
-#      optimiser_deploy_cluster: 'eu.nebulouscloud.exn.sal.cluster.deploy'
+
 
 
 sal:
@@ -45,7 +45,7 @@ docker:
 onm_url: '${ONM_URL}'
 
 cloud_resources:
-  uuid: '${CLOUD_RESOURCES_UUID:c9a625c7-f705-4128-948f-6b5765509029}'
+  uuid: '${CLOUD_RESOURCES_UUID:c9a625c7-f705-4128-948f-6b5765509029-2}'
   title: '${CLOUD_RESOURCES_TITLE:blah}'
   platform: '${CLOUD_RESOURCES_PLATFORM:AWS}'
   enabled: '${CLOUD_RESOURCES_ENABLED:true}'

@@ -1,0 +1,119 @@
+{
+  "title": "{{APP_ID}}",
+  "uuid": "{{APP_ID}}",
+  "status": "deploying",
+  "content": "{{APP_KUBEVELA}}",
+  "variables": [
+    {
+      "key": "spec_components_0_traits_0_properties_replicas",
+      "path": "/spec/components/0/traits/0/properties/replicas",
+      "type": "float",
+      "meaning": "replicas",
+      "value": {
+        "lower_bound": 2,
+        "higher_bound": 5
+      }
+    }
+  ],
+  "environmentVariables": [
+   
+  ],
+  "resources": [
+  
+  ],
+  "templates": [],
+  "parameters": [],
+  "metrics": [
+    {
+      "type": "raw",
+      "name": "RawProcessingLatency",
+      "level": "global",
+      "components": [],
+      "sensor": "job_process_time_instance",
+      "config": [],
+      "isWindowOutputRaw": true,
+      "outputRaw": {
+        "type": "all",
+        "interval": 30,
+        "unit": "sec"
+      }
+    },
+    {
+      "type": "composite",
+      "level": "global",
+      "components": [],
+      "name": "MeanJobProcessingLatency",
+      "template": "",
+      "formula": "mean(RawProcessingLatency)",
+      "isWindowInput": true,
+      "input": {
+        "type": "sliding",
+        "interval": 30,
+        "unit": "sec"
+      },
+      "isWindowOutput": true,
+      "output": {
+        "type": "all",
+        "interval": 30,
+        "unit": "sec"
+      },
+      "arguments": [
+        "RawProcessingLatency"
+      ]
+    },
+    {"name":"currentcpu","type":"raw","sensor":{"type":"netdata k8s.cgroup.cpu","config":{}},"output":"all 10 sec"}
+  ],
+  "sloViolations": {
+    "nodeKey": "5ce4273e-5ac3-478b-b460-075b053fb994",
+    "isComposite": true,
+    "condition": "AND",
+    "not": false,
+    "children": [
+      {
+        "nodeKey": "982c13a8-bbae-4574-b2be-eca15b865563",
+        "isComposite": false,
+        "metricName": "MeanJobProcessingLatency",
+        "operator": ">",
+        "value": 50
+      }
+    ]
+  },
+  "utilityFunctions": [
+    {
+      "name": "f",
+      "type": "minimize",
+      "expression": {
+        "formula": "(dummy_app_worker_MeanJobProcessingLatency*currentReplicas)/spec_components_0_traits_0_properties_replicas",
+        "variables": [
+          {
+            "name": "dummy_app_worker_MeanJobProcessingLatency",
+            "value": "MeanJobProcessingLatency"
+          },
+          {
+            "name": "currentReplicas",
+            "value": "currentReplicas"
+          },
+          {
+            "name": "spec_components_0_traits_0_properties_replicas",
+            "value": "spec_components_0_traits_0_properties_replicas"
+          }
+        ]
+      }
+    },
+    {
+      "name": "currentReplicas",
+      "type": "constant",
+      "expression": {
+        "formula": "a",
+        "variables": [
+          {
+            "name": "a",
+            "value": "spec_components_0_traits_0_properties_replicas"
+          }
+        ]
+      }
+    }
+  ],
+  "_create": true,
+  "_delete": true
+}
