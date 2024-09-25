@@ -150,7 +150,7 @@ public class AppDeploymentTest extends TestNGCitrusSpringSupport {
         resources.clear();
 
         /*
-         * Config the cloud provider in .env
+         * Config the cloud provider in .env.ubi
          **/
         CloudResources cloudResource = new CloudResources(
                 Optional.ofNullable(env.getProperty("cloud_resources.uuid")).orElseThrow(() -> new MissingConfigValueException("cloud_resources.uuid")),
@@ -163,7 +163,7 @@ public class AppDeploymentTest extends TestNGCitrusSpringSupport {
 
 
         /*
-        * Configure docker registry in .env
+        * Configure docker registry in .env.ubi
         */
         envVars.add(Map.of("name", "PRIVATE_DOCKER_REGISTRY_SERVER", "value", Optional.ofNullable(env.getProperty("docker.server")).orElseThrow(() -> new MissingConfigValueException("docker.server")), "secret", "false"));
         envVars.add(Map.of("name", "PRIVATE_DOCKER_REGISTRY_USERNAME", "value", Optional.ofNullable(env.getProperty("docker.username")).orElseThrow(() -> new MissingConfigValueException("docker.username")), "secret", "false"));

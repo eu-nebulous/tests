@@ -4,6 +4,7 @@ target/
 !**/src/test/**/target/
 
 ### IntelliJ IDEA ###
+.idea/
 .idea/modules.xml
 .idea/jarRepositories.xml
 .idea/compiler.xml
@@ -37,10 +38,17 @@ build/
 ### Mac OS ###
 .DS_Store
 
-# Local environment
-.env
-# Ignore ubi.example package
-src/main/java/ubi/example/
-src/test/java/ubi/example/
-# Ignore mocks directory under resources of test
-src/test/resources/mocks/
+# Ignore files inside resources/mocks
+src/test/resources/mocks/*
+
+# Ignore files inside resources/mqtt_processor_app
+src/test/resources/mqtt_processor_app/*
+
+# Ignore docker-compose.yml
+docker-compose.yml
+
+# Ignore test.automated.example folder
+src/test/java/eu/nebulouscloud/test/automated/example/*
+
+# Ignore .env.ubi
+.env.ubi
