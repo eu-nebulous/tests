@@ -90,7 +90,7 @@
     </build>
 
     <dependencies>
-        <!-- Dotenv Java: Loads environment variables from a `.env` file into the application -->
+        <!-- Dotenv Java: Loads environment variables from a `.env.ubi` file into the application -->
         <dependency>
             <groupId>io.github.cdimascio</groupId>
             <artifactId>dotenv-java</artifactId>

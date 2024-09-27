@@ -16,6 +16,7 @@ import org.springframework.http.HttpStatus;
 import org.testng.Assert;
 
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.StreamSupport;
 
 /**
@@ -106,18 +107,20 @@ public class SALConnectionManager {
     }
 
     /**
-     * Placeholder method to get the cluster status.
+     * Method to get the cluster status.
      *
      * @param runner    The Citrus TestRunner for running Citrus actions.
      * @param clusterName The Name of the cluster to fetch the status for.
+     * @return The final status of the cluster.
      */
-    public void getClusterStatus(TestCaseRunner runner, String clusterName) {
+    public String getClusterStatus(TestCaseRunner runner, String clusterName) {
 
         long maxWaitTimeMillis = 40 * 60 * 1000; // 40 minutes in ms
-        long retryIntervalMillis = 10 * 1000; // 10 seconds in ms
+        long retryIntervalMillis = 20 * 1000; // 10 seconds in ms
         long startTime = System.currentTimeMillis();
 
         AtomicBoolean isDeployed = new AtomicBoolean(false);
+        AtomicReference<String> status = new AtomicReference<>(null);  // Use AtomicReference to store the final status
 
         while (!isDeployed.get() && (System.currentTimeMillis() - startTime) < maxWaitTimeMillis) {
             // Step 1: Send a request to fetch the cluster status
@@ -136,22 +139,24 @@ public class SALConnectionManager {
                     .message()
                     .validate((message, context) -> {
                         String payload = message.getPayload().toString();
+                        logger.info(payload);
 
                         // Parse the payload to extract the "status" field
                         try {
                             JsonNode jsonResponse = objectMapper.readTree(payload);
-                            String status = jsonResponse.get("status").asText();
-                            logger.info("Cluster status: {}", status);
+                            String currentStatus = jsonResponse.get("status") != null ? jsonResponse.get("status").asText() : null;
+                            status.set(currentStatus);  // Set the status using AtomicReference
+                            logger.info("Cluster status: {}", currentStatus);
 
-                            // If the status is "deployed", set the isDeployed flag to true
-                            if ("deployed".equalsIgnoreCase(status)) {
+                            // If the status is "deployed", set the isDeployed flag to true and exit the loop
+                            if ("deployed".equalsIgnoreCase(currentStatus)) {
                                 isDeployed.set(true);
                                 logger.info("Cluster successfully reached 'deployed' status.");
-                            } else if ("submited".equalsIgnoreCase(status)) {
-                                logger.debug("Cluster is still in 'submited' state, retrying...");
+                            } else if ("submited".equalsIgnoreCase(currentStatus) || currentStatus == null || "defined".equalsIgnoreCase(currentStatus)) {
+                                logger.debug("Cluster is still in 'submited', 'defined' state or status is null, retrying...");
                             } else {
-                                logger.warn("Unexpected cluster status: {}", status);
-                                isDeployed.set(true);
+                                logger.warn("Unexpected cluster status: {}, stopping the check.", currentStatus);
+                                isDeployed.set(false);
                             }
 
                         } catch (JsonProcessingException e) {
@@ -161,6 +166,10 @@ public class SALConnectionManager {
                     }));
 
             // Wait for the retry interval before trying again
+            if (!isDeployed.get() && "deployed".equalsIgnoreCase(status.get())) {
+                break;  // Break the loop if it is deployed
+            }
+
             if (!isDeployed.get()) {
                 try {
                     Thread.sleep(retryIntervalMillis);
@@ -171,12 +180,7 @@ public class SALConnectionManager {
             }
         }
 
-        if (isDeployed.get()) {
-            logger.info("Cluster successfully deployed.");
-            Assert.assertTrue(isDeployed.get(), "Cluster has been successfully deployed.");
-        } else {
-            logger.error("Cluster did not reach 'deployed' status.");
-            Assert.fail("Cluster did not reach 'deployed' status.");
-        }
+        return status.get();
     }
+
 }
