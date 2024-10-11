@@ -5,7 +5,6 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import eu.nebulouscloud.model.SALAPIClient;
 
-import eu.nebulouscloud.test.automated.tests.NebulousEndpointConfig;
 import org.citrusframework.TestCaseRunner;
 import org.citrusframework.http.actions.HttpActionBuilder;
 import org.citrusframework.http.client.HttpClient;
@@ -13,7 +12,6 @@ import org.citrusframework.message.MessageType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
-import org.testng.Assert;
 
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
@@ -45,8 +43,9 @@ public class SALConnectionManager {
      * Logs into the SAL API and retrieves the session ID.
      *
      * @param runner The Citrus TestRunner for running Citrus actions.
+     * @return
      */
-    public void loginAndGetSessionId(TestCaseRunner runner) {
+    public boolean loginAndGetSessionId(TestCaseRunner runner) {
         // Step 1: Connect to SAL to get session ID
         runner.run(HttpActionBuilder.http()
                 .client(salEndpoint)
@@ -64,6 +63,7 @@ public class SALConnectionManager {
                     salapiClient.setSessionId(sessionId); // Store the session ID in the salapiClient
                     logger.debug("Session ID: " + sessionId);
                 }));
+        return salapiClient.getSessionId() != null;
     }
 
     /**
@@ -72,8 +72,10 @@ public class SALConnectionManager {
      * @param runner The Citrus TestRunner for running Citrus actions.
      * @param uuid   The UUID of the cloud provider to validate.
      */
-    public void validateCloudProviders(TestCaseRunner runner, String uuid) {
+    public boolean validateCloudProviders(TestCaseRunner runner, String uuid) {
         // Step 2: Fetch cloud providers
+
+        AtomicBoolean uuidExists = new AtomicBoolean(false);
         runner.run(HttpActionBuilder.http()
                 .client(salEndpoint)
                 .send()
@@ -95,15 +97,13 @@ public class SALConnectionManager {
                         if (!jsonArray.isArray() || jsonArray.isEmpty()) {
                             throw new RuntimeException("JSON array shouldn't be empty");
                         }
-                        boolean uuidExists = StreamSupport.stream(jsonArray.spliterator(), false)
-                                .anyMatch(node -> uuid.equals(node.get("cloudId").asText()));
-                        if (!uuidExists) {
-                            throw new RuntimeException("The provided UUID does not exist in the array for any cloudId.");
-                        }
+                         uuidExists.set(StreamSupport.stream(jsonArray.spliterator(), false)
+                                 .anyMatch(node -> uuid.equals(node.get("cloudId").asText())));
                     } catch (JsonProcessingException e) {
                         throw new RuntimeException(e);
                     }
                 }));
+        return uuidExists.get();
     }
 
     /**

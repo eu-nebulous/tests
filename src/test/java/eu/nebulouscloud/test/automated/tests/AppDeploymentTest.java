@@ -173,8 +173,9 @@ public class AppDeploymentTest extends TestNGCitrusSpringSupport {
 
 
         // Test SAL connection and cloud providers
-        salConnectionManager.loginAndGetSessionId(runner);
-        salConnectionManager.validateCloudProviders(runner, cloudResource.getUuid());
+        assertTrue(salConnectionManager.loginAndGetSessionId(runner), "Connection has been established with SAL");
+        assertTrue(salConnectionManager.validateCloudProviders(runner, cloudResource.getUuid()), "The provided cloud is registered on SAL");
+
 
         // Header Selectors for receiving published message
         Map<String, String> selectorMap = new HashMap<>();
