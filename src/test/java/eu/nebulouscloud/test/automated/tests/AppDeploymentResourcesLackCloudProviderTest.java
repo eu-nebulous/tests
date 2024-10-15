@@ -34,8 +34,13 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import static org.citrusframework.actions.ReceiveMessageAction.Builder.receive;
 import static org.testng.Assert.assertTrue;
 
+/**
+ * TC_25
+ * NebulOuS reacts to node failure
+ *
+ */
 @ContextConfiguration(classes = {NebulousEndpointConfig.class})
-public class AppDeploymentTest extends TestNGCitrusSpringSupport {
+public class AppDeploymentResourcesLackCloudProviderTest extends TestNGCitrusSpringSupport {
 
     private final ObjectMapper objectMapper = new ObjectMapper();
 
@@ -119,11 +124,6 @@ public class AppDeploymentTest extends TestNGCitrusSpringSupport {
         salConnectionManager = new SALConnectionManager(salEndpoint, objectMapper);
     }
 
-    /**
-     * TC_23
-     * This test ensures that an application can be deployed using NebulOuS cloud provider
-     *
-     */
     @Test
     @CitrusTest
     public void test() throws Exception {
@@ -133,8 +133,8 @@ public class AppDeploymentTest extends TestNGCitrusSpringSupport {
         * Define and add here the necessary Environmental Variables that are specified in your Kubevela file
         **/
         appParameters.put("{{REPORT_METRICS_TO_EMS}}", "True");
-        appParameters.put("{{APP_CPU}}", "4.0");
-        appParameters.put("{{APP_RAM}}", "8048Mi");
+        appParameters.put("{{APP_CPU}}", "100000.0");
+        appParameters.put("{{APP_RAM}}", "1Pi");
         appParameters.put("{{APP_EMS_PORT}}", "61610");
         appParameters.put("{{APP_EMS_USER}}", env.getProperty("app.ems.username"));
         appParameters.put("{{APP_EMS_PASSWORD}}", env.getProperty("app.ems.password"));
@@ -320,108 +320,5 @@ public class AppDeploymentTest extends TestNGCitrusSpringSupport {
                     }
                 })
         );
-        String clusterName = null;
-        if (defineCluster.getPayload().containsKey("body")) {
-            Object bodyObject = defineCluster.getPayload().get("body");
-
-            if (bodyObject instanceof Map) {
-                Map<String, Object> bodyMap = (Map<String, Object>) bodyObject;
-                Object nameObject = bodyMap.get("name");
-
-                if (nameObject instanceof String name) {
-                    logger.info("Cluster name: " + name);
-                    clusterName = name;
-                } else {
-                    logger.error("Name is not a string.");
-                }
-            } else {
-                logger.error("Body is not a map.");
-            }
-        } else {
-            logger.error("Result does not contain 'body'.");
-        }
-
-        /*
-         * Assert that Optimiser deploys the cluster
-         **/
-        logger.info("Wait for optimizer to deploy cluster");
-        $(receive(deployClusterEndpoint)
-                .message()
-                .selector(selectorMap)
-                .timeout(8000)
-                .validate((message, context) -> {
-                    // print debug message
-                    logger.debug("Message that optimizer deploys the cluster received");
-                    logger.info(message.getPayload().toString());
-                    // Ignore body
-                })
-        );
-
-        /*
-         * Assert that the cluster is ready
-         **/
-        Assert.assertEquals(salConnectionManager.getClusterStatus(runner, clusterName), "deployed", "Cluster has been successfully deployed");
-
-        /*
-         * Assert that App is ready and running
-         **/
-        NebulousCoreMessage appStatus = new NebulousCoreMessage();
-        AtomicBoolean success = new AtomicBoolean(false);
-        int retryIntervalMillis = 5000;
-        AtomicBoolean keepLooping = new AtomicBoolean(true);
-        while (keepLooping.get() && !success.get()) {
-            try {
-                $(receive(appStatusEndpoint)
-                        .message()
-                        .name("appStatus")
-                        .selector(selectorMap)
-                        .timeout(60 * 60 * 1000) //60min 60sec 1000ms
-                        .validate((message, context) -> {
-                            // Print debug message
-                            logger.debug("Message of app status");
-                            logger.debug(message.getPayload().toString());
-                            try {
-                                Map<String, Object> messageMap = parser.parseStringToMap(message.getPayload().toString());
-                                appStatus.setPayload(messageMap);
-
-                                String state = (String) appStatus.getPayload().get("state");
-
-                                if ("RUNNING".equals(state)) {
-                                    success.set(true);
-                                    keepLooping.set(false);
-                                } else if ("FAILED".equals(state)) {
-                                    keepLooping.set(false);
-                                    throw new CitrusRuntimeException("Received message with state FAILED, stopping the test.");
-                                } else {
-                                    logger.info("Received message with state: " + state + ". Continuing to check...");
-                                }
-                            } catch (InvalidFormatException e) {
-                                logger.error("Failed to parse input: " + e.getMessage());
-                            }
-                        })
-                );
-            } catch (ActionTimeoutException e) {
-                logger.warn("No message received within timeout, retrying...");
-            } catch (AssertionError | CitrusRuntimeException e) {
-                logger.error("Validation failed or message state is 'FAILED', stopping the test.", e);
-                throw e;  // Propagate the error if state is "FAILED" or validation failed
-            }
-
-            // Wait for the retry interval if not yet successful
-            if (!success.get() && keepLooping.get()) {
-                try {
-                    Thread.sleep(retryIntervalMillis);
-                } catch (InterruptedException ie) {
-                    logger.error("Sleep interrupted", ie);
-                }
-            }
-        }
-        if (success.get()) {
-            logger.info("App successfully reached the 'RUNNING' state.");
-            Assert.assertTrue(success.get(), "App has been successfully deployed and is running.");
-        } else {
-            logger.error("App did not reach the 'RUNNING' state within the timeout period.");
-            Assert.fail("App did not reach the 'RUNNING' state within the timeout period.");
-        }
     }
 }
