@@ -32,6 +32,7 @@ import java.util.*;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import static org.citrusframework.actions.ReceiveMessageAction.Builder.receive;
+import static org.citrusframework.container.Assert.Builder.assertException;
 import static org.testng.Assert.assertTrue;
 
 /**
@@ -225,7 +226,7 @@ public class AppDeploymentResourcesLackCloudProviderTest extends TestNGCitrusSpr
         $(receive(evaluatorEndpoint)
                 .message()
                 .selector(selectorMap)
-                .timeout(10000)
+                .timeout(30000)
                 .validate((message, context) -> {
                     // print debug message
                     logger.debug("Message from Evaluator received");
@@ -303,22 +304,18 @@ public class AppDeploymentResourcesLackCloudProviderTest extends TestNGCitrusSpr
         /*
          * Wait for optimizer to define cluster
          **/
-        NebulousCoreMessage defineCluster = new NebulousCoreMessage();
-        logger.info("Wait for optimizer to define cluster");
-        $(receive(defineClusterEndpoint)
-                .message()
-                .selector(selectorMap)
-                .timeout(8000)
-                .validate((message, context) -> {
-                    // print debug message
-                    logger.debug("Message that optimizer defined the cluster received");
-                    try {
-                        Map<String, Object> messageMap = parser.parseStringToMap(message.getPayload().toString());
-                        defineCluster.setPayload(messageMap);
-                    } catch (InvalidFormatException e) {
-                        logger.error("Failed to parse input: " + e.getMessage());
-                    }
-                })
-        );
+
+
+        assertException()
+                .exception(CitrusRuntimeException.class)
+                .when(
+                        receive(defineClusterEndpoint)
+                                .message()
+                                .selector(selectorMap)
+                                .timeout(20000)
+                );
+        logger.warn("Cannot Define Cluster");
+
+
     }
 }

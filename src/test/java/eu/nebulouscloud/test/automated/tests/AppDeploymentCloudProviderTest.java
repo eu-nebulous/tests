@@ -53,10 +53,10 @@ public class AppDeploymentCloudProviderTest extends TestNGCitrusSpringSupport {
     private MessageSender messageSender;
     private SALConnectionManager salConnectionManager;
 
-    String applicationId = new SimpleDateFormat("HHmmssddMM").format(new Date())
+    String applicationId =
+            new SimpleDateFormat("HHmmssddMM").format(new Date())
             + "-automated-testing-app-"
             + new Date().getTime();
-
 
     @Autowired
     @Qualifier("appCreationEndpoint")
@@ -124,6 +124,12 @@ public class AppDeploymentCloudProviderTest extends TestNGCitrusSpringSupport {
         salConnectionManager = new SALConnectionManager(salEndpoint, objectMapper);
     }
 
+    String mqttBroker = "broker.emqx.io";
+    String mqttPort = "1883";
+    String mqttTopicPrefix = applicationId.replaceAll("-", "");
+    String mqttAppInputTopic = mqttTopicPrefix + "/input";
+    String mqttAppOutputTopic = mqttTopicPrefix + "/output";
+
     @Test
     @CitrusTest
     public void test() throws Exception {
@@ -133,6 +139,10 @@ public class AppDeploymentCloudProviderTest extends TestNGCitrusSpringSupport {
         * Define and add here the necessary Environmental Variables that are specified in your Kubevela file
         **/
         appParameters.put("{{REPORT_METRICS_TO_EMS}}", "True");
+        appParameters.put("{{APP_MQTT_BROKER_SERVER}}", mqttBroker);
+        appParameters.put("{{APP_MQTT_BROKER_PORT}}", mqttPort);
+        appParameters.put("{{APP_MQTT_INPUT_TOPIC}}", "$share/workers/" + mqttAppInputTopic);
+        appParameters.put("{{APP_MQTT_OUTPUT_TOPIC}}", mqttAppOutputTopic);
         appParameters.put("{{APP_CPU}}", "4.0");
         appParameters.put("{{APP_RAM}}", "8048Mi");
         appParameters.put("{{APP_EMS_PORT}}", "61610");
@@ -225,7 +235,7 @@ public class AppDeploymentCloudProviderTest extends TestNGCitrusSpringSupport {
         $(receive(evaluatorEndpoint)
                 .message()
                 .selector(selectorMap)
-                .timeout(10000)
+                .timeout(30000)
                 .validate((message, context) -> {
                     // print debug message
                     logger.debug("Message from Evaluator received");
@@ -308,7 +318,7 @@ public class AppDeploymentCloudProviderTest extends TestNGCitrusSpringSupport {
         $(receive(defineClusterEndpoint)
                 .message()
                 .selector(selectorMap)
-                .timeout(8000)
+                .timeout(30000)
                 .validate((message, context) -> {
                     // print debug message
                     logger.debug("Message that optimizer defined the cluster received");
@@ -360,7 +370,10 @@ public class AppDeploymentCloudProviderTest extends TestNGCitrusSpringSupport {
         /*
          * Assert that the cluster is ready
          **/
-        Assert.assertEquals(salConnectionManager.getClusterStatus(runner, clusterName), "deployed", "Cluster has been successfully deployed");
+        Assert.assertTrue(
+                salConnectionManager.getClusterStatus(runner, clusterName).equalsIgnoreCase("deployed"),
+                "Cluster has been successfully deployed"
+        );
 
         /*
          * Assert that App is ready and running

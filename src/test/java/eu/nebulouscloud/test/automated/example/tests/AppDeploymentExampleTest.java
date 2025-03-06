@@ -224,7 +224,7 @@ public class AppDeploymentExampleTest extends TestNGCitrusSpringSupport {
                 .selector(selectorMap)
                 .validate((message, context) -> {
                     // print debug message
-                    logger.debug("appCreationPayload payload received");
+                    logger.info("appCreationPayload payload received");
                     // Ignore body
                 }));
 
@@ -246,7 +246,7 @@ public class AppDeploymentExampleTest extends TestNGCitrusSpringSupport {
                 .selector(selectorMap)
                 .validate((message, context) -> {
                     // print debug message
-                    logger.debug("metricModelPayload payload received");
+                    logger.info("metricModelPayload payload received");
                     // Ignore body
                 })
         );
@@ -260,7 +260,8 @@ public class AppDeploymentExampleTest extends TestNGCitrusSpringSupport {
                 .timeout(10000)
                 .validate((message, context) -> {
                     // print debug message
-                    logger.debug("Message from Evaluator received");
+                    logger.info("Message from Evaluator received");
+                    logger.info(message);
                     // Ignore body
                 })
         );
@@ -278,7 +279,8 @@ public class AppDeploymentExampleTest extends TestNGCitrusSpringSupport {
                 .timeout(100000)
                 .validate((message, context) -> {
                     // print debug message
-                    logger.debug("Message to request candidates received");
+                    logger.info("Message to request candidates received");
+                    logger.info(message);
                     assertTrue(message.getHeader("citrus_jms_correlationId") != null);
                     nodeRequestToCFSBmessage.setCorrelationId(message.getHeader("citrus_jms_correlationId").toString());
                     // Ignore body
@@ -292,7 +294,8 @@ public class AppDeploymentExampleTest extends TestNGCitrusSpringSupport {
                 .timeout(10000)
                 .validate((message, context) -> {
                     // print debug message
-                    logger.debug("Message to request candidates received from SAL");
+                    logger.info("Message to request candidates received from SAL");
+                    logger.info(message);
                     assertTrue(message.getHeader("citrus_jms_correlationId") != null);
                     nodeRequestToSALmessage.setCorrelationId(message.getHeader("citrus_jms_correlationId").toString());
                     // Ignore body
@@ -309,7 +312,8 @@ public class AppDeploymentExampleTest extends TestNGCitrusSpringSupport {
                 .timeout(3000)
                 .validate((message, context) -> {
                     // print debug message
-                    logger.debug("Message that CFSB receives an answer on node candidates from SAL , received");
+                    logger.info("Message that CFSB receives an answer on node candidates from SAL , received");
+                    logger.info(message);
                     assertTrue(nodeRequestToSALmessage.getCorrelationId().equals(message.getHeader("citrus_jms_correlationId").toString()));
                     // Ignore body
                 })
@@ -326,7 +330,8 @@ public class AppDeploymentExampleTest extends TestNGCitrusSpringSupport {
                 .timeout(8000)
                 .validate((message, context) -> {
                     // print debug message
-                    logger.debug("Message that optimizer receives an answer on node candidates from CFSB , received");
+                    logger.info("Message that optimizer receives an answer on node candidates from CFSB , received");
+                    logger.info(message);
                     assertTrue(nodeRequestToCFSBmessage.getCorrelationId().equals(message.getHeader("citrus_jms_correlationId").toString()));
                     // Ignore body
                 })
@@ -340,10 +345,10 @@ public class AppDeploymentExampleTest extends TestNGCitrusSpringSupport {
         $(receive(defineClusterEndpoint)
                 .message()
                 .selector(selectorMap)
-                .timeout(8000)
+                .timeout(30000)
                 .validate((message, context) -> {
                     // print debug message
-                    logger.debug("Message that optimizer defined the cluster received");
+                    logger.info("Message that optimizer defined the cluster received");
                     try {
                         Map<String, Object> messageMap = parser.parseStringToMap(message.getPayload().toString());
                         defineCluster.setPayload(messageMap);

@@ -152,10 +152,11 @@ public class SALConnectionManager {
                             if ("deployed".equalsIgnoreCase(currentStatus)) {
                                 isDeployed.set(true);
                                 logger.info("Cluster successfully reached 'deployed' status.");
-                            } else if ("submited".equalsIgnoreCase(currentStatus) || currentStatus == null || "defined".equalsIgnoreCase(currentStatus)) {
-                                logger.debug("Cluster is still in 'submited', 'defined' state or status is null, retrying...");
+                            } else if ("submitted".equalsIgnoreCase(currentStatus) || currentStatus == null || "defined".equalsIgnoreCase(currentStatus)) {
+                                logger.info("Cluster is still in {},retrying.....",currentStatus);
+                                logger.debug("Cluster is still in 'submitted', 'defined' state or status is null, retrying...");
                             } else {
-                                logger.warn("Unexpected cluster status: {}, stopping the check.", currentStatus);
+                                logger.warn("Unexpected cluster status: {}. Stop Checking", currentStatus);
                                 isDeployed.set(false);
                             }
 
