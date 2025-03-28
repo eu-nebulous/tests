@@ -1,0 +1,61 @@
+apiVersion: "core.oam.dev/v1beta1"
+kind: "Application"
+metadata:
+  name: "{{APP_ID}}"
+spec:
+  components:
+  - name: "dummy-app-controller"
+    type: "webservice"
+    properties:
+      image: "rsprat/dummy-rest-app-controller:v1"
+      cpu: "{{APP_CPU}}"
+      memory: "{{APP_RAM}}"
+      imagePullPolicy: "Always"
+      imagePullSecrets: ["regcred"]
+      exposeType: NodePort
+      ports:
+        - name: controller-api
+          expose: true
+          port: 8000
+          nodePort: 30008
+          protocol: TCP
+      env:    
+      - name: "report_metrics_to_ems"
+        value: "{{REPORT_METRICS_TO_EMS}}"
+      - name: "nebulous_ems_ip"
+        valueFrom:
+          fieldRef:
+            fieldPath: status.hostIP
+      - name: "nebulous_ems_port"
+        value: "{{APP_EMS_PORT}}"
+      - name: "nebulous_ems_user"
+        value: "{{APP_EMS_USER}}"
+      - name: "nebulous_ems_password"
+        value: "{{APP_EMS_PASSWORD}}"
+    traits:
+    - type: "scaler"
+      properties:
+        replicas: 1
+  - name: "dummy-app-worker"
+    type: "webservice"
+    properties:
+      image: "rsprat/dummy-rest-app-worker:v1"
+      cpu: "{{APP_CPU}}"
+      memory: "{{APP_RAM}}"      
+      imagePullPolicy: "Always"
+      imagePullSecrets: ["regcred"]
+      env:
+        - name: API_ADDRESS
+          value: http://dummy-app-controller:8000
+    traits:
+    - type: "scaler"
+      properties:
+        replicas: 1
+    - type: "annotations"
+      properties:
+        "nebulous-placement-constraint": "EDGE"
+
+
+
+
+

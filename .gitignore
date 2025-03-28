@@ -44,6 +44,8 @@ src/test/resources/mocks/*
 
 # Ignore files inside resources/mqtt_processor_app
 src/test/resources/mqtt_processor_app/*
+# Ignore files inside resources/rest-processor-app
+src/test/resources/rest-processor-app/*
 
 # Ignore docker-compose.yml
 docker-compose.yml

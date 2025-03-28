@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import eu.nebulouscloud.model.SALAPIClient;
 
+import jakarta.servlet.http.Cookie;
 import org.citrusframework.TestCaseRunner;
 import org.citrusframework.http.actions.HttpActionBuilder;
 import org.citrusframework.http.client.HttpClient;
@@ -115,7 +116,7 @@ public class SALConnectionManager {
      */
     public String getClusterStatus(TestCaseRunner runner, String clusterName) {
 
-        long maxWaitTimeMillis = 40 * 60 * 1000; // 40 minutes in ms
+        long maxWaitTimeMillis = 60 * 60 * 1000; // 60 minutes in ms
         long retryIntervalMillis = 20 * 1000; // 10 seconds in ms
         long startTime = System.currentTimeMillis();
 
@@ -152,7 +153,7 @@ public class SALConnectionManager {
                             if ("deployed".equalsIgnoreCase(currentStatus)) {
                                 isDeployed.set(true);
                                 logger.info("Cluster successfully reached 'deployed' status.");
-                            } else if ("submitted".equalsIgnoreCase(currentStatus) || currentStatus == null || "defined".equalsIgnoreCase(currentStatus)) {
+                            } else if ("submitted".equalsIgnoreCase(currentStatus) || /* currentStatus == null || */ "defined".equalsIgnoreCase(currentStatus)) {
                                 logger.info("Cluster is still in {},retrying.....",currentStatus);
                                 logger.debug("Cluster is still in 'submitted', 'defined' state or status is null, retrying...");
                             } else {
@@ -166,12 +167,18 @@ public class SALConnectionManager {
                         }
                     }));
 
-            // Wait for the retry interval before trying again
-            if (!isDeployed.get() && "deployed".equalsIgnoreCase(status.get())) {
-                break;  // Break the loop if it is deployed
-            }
-
+            // Handle unexpected status
             if (!isDeployed.get()) {
+                String currentStatus = status.get();
+                if (currentStatus != null &&
+                        !currentStatus.equalsIgnoreCase("submitted") &&
+                        !currentStatus.equalsIgnoreCase("defined") &&
+                        !currentStatus.equalsIgnoreCase("deployed")) {
+
+                    logger.warn("Unexpected cluster status: '{}'. Exiting polling loop.", currentStatus);
+                    break;
+                }
+
                 try {
                     Thread.sleep(retryIntervalMillis);
                 } catch (InterruptedException e) {

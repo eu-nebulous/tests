@@ -1,0 +1,109 @@
+{
+  "application": "{{APP_ID}}",
+  "yaml": {
+    "apiVersion": "nebulous/v1",
+    "kind": "MetricModel",
+    "metadata": {
+      "name": "{{APP_ID}}",
+      "labels": {
+        "app": "{{APP_ID}}"
+      }
+    },
+    "templates": [],
+    "spec": {
+      "components": [
+        {
+          "name": "spec-comp",
+          "metrics": []
+        }
+      ],
+      "scopes": [
+        {
+          "name": "app-wide-scope",
+          "components": [],
+          "metrics": [
+            {
+              "name": "RawMaxMessageAge",
+              "type": "raw",
+              "sensor": {
+                "type": "-",
+                "config": {}
+              },
+              "output": "all 15 sec"
+            },
+            {
+              "name": "NumWorkers",
+              "type": "raw",
+              "sensor": {
+                "type": "-",
+                "config": {}
+              },
+              "output": "all 15 sec"
+            },
+            {
+              "name": "NumPendingRequests",
+              "type": "raw",
+              "sensor": {
+                "type": "-",
+                "config": {}
+              },
+              "output": "all 15 sec"
+            },
+            {
+              "name": "AccumulatedSecondsPendingRequests",
+              "type": "raw",
+              "sensor": {
+                "type": "-",
+                "config": {}
+              },
+              "output": "all 15 sec"
+            },
+            {
+              "name": "MeanMaxMessageAge",
+              "type": "composite",
+              "template": "",
+              "formula": "mean(RawMaxMessageAge)",
+              "window": {
+                "type": "sliding",
+                "size": "30 sec"
+              },
+              "output": "last 30 sec"
+            },
+            {
+              "name": "PendingRequestsMinusWorkers",
+              "type": "composite",
+              "template": "",
+              "formula": "NumPendingRequests-NumWorkers",
+              "window": {
+                "type": "sliding",
+                "size": "30 sec"
+              },
+              "output": "last 30 sec"
+            },
+            {
+              "name": "currentcpu",
+              "type": "raw",
+              "sensor": {
+                "type": "netdata k8s.cgroup.cpu",
+                "config": {}
+              },
+              "output": "all 10 sec"
+            }
+          ],
+          "requirements": [
+            {
+              "name": "MaxMessageAge_SLO",
+              "type": "slo",
+              "constraint": "(MeanMaxMessageAge > 50)"
+            },
+            {
+              "name": "UnusedResources_SLO",
+              "type": "slo",
+              "constraint": "(PendingRequestsMinusWorkers < 0)"
+            }
+          ]
+        }
+      ]
+    }
+  }
+}

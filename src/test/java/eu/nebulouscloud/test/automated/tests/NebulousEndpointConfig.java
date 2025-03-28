@@ -170,6 +170,19 @@ public class NebulousEndpointConfig {
     }
 
     @Bean
+    public JmsEndpoint salNodeCreation(ConnectionFactory connectionFactory) {
+        String appStatusDestination = env.getProperty("jms.topic.nebulous.sal_node_create");
+        logger.debug("Inbound Destination: " + appStatusDestination);
+        return CitrusEndpoints.jms()
+                .asynchronous()
+                .connectionFactory(connectionFactory)
+                .destination(appStatusDestination)
+                .pubSubDomain(true)
+                .autoStart(true)
+                .build();
+    }
+
+    @Bean
     public HttpClient salEndpoint() {
         return CitrusEndpoints
                 .http()
@@ -178,6 +191,17 @@ public class NebulousEndpointConfig {
                 .authentication(HttpAuthentication.basic(
                         env.getProperty("sal.api.username"),
                         env.getProperty("sal.api.password")))
+                .build();
+    }
+
+    @Bean
+    public HttpClient resourceManagerEndpoint() {
+        return CitrusEndpoints
+                .http()
+                .client()
+                .requestUrl(env.getProperty("resource_manager.url"))
+                .contentType("application/json")
+                .handleCookies(true)
                 .build();
     }
 }

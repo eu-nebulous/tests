@@ -1,0 +1,28 @@
+{
+  "id": null,
+  "requester": null,
+  "nodeReference": null,
+  "requestDate": null,
+  "status": null,
+  "lastUpdateDate": null,
+  "device": {
+    "id": "{{DEVICE_ID}}",
+    "name": "{{DEVICE_NAME}}",
+    "ref": "{{DEVICE_REF}}",
+    "os": "LINUX",
+    "owner": "admin",
+    "price": "0.00",
+    "provider": "{{DEVICE_PROVIDER}}",
+    "ipAddress": "{{DEVICE_IP}}",
+    "port": "{{DEVICE_PORT}}",
+    "location": {
+      "name": "Athens",
+      "latitude": "38",
+      "longitude": "27"
+    },
+    "username": "{{DEVICE_USERNAME}}",
+    "password": "{{DEVICE_PASSWORD}}",
+    "publicKey": "{{DEVICE_PUBLIC_KEY}}"
+  },
+  "messages": []
+}

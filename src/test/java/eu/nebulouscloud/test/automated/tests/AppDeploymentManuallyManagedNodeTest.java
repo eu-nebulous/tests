@@ -1,14 +1,12 @@
 package eu.nebulouscloud.test.automated.tests;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import eu.nebulouscloud.exceptions.InvalidFormatException;
 import eu.nebulouscloud.exceptions.MissingConfigValueException;
 import eu.nebulouscloud.model.CloudResources;
 import eu.nebulouscloud.model.NebulousCoreMessage;
-import eu.nebulouscloud.util.FileTemplatingUtils;
-import eu.nebulouscloud.util.MessageSender;
-import eu.nebulouscloud.util.SALConnectionManager;
-import eu.nebulouscloud.util.StringToMapParser;
+import eu.nebulouscloud.util.*;
 import org.citrusframework.TestCaseRunner;
 import org.citrusframework.TestCaseRunnerFactory;
 import org.citrusframework.annotations.CitrusTest;
@@ -35,12 +33,12 @@ import static org.citrusframework.actions.ReceiveMessageAction.Builder.receive;
 import static org.testng.Assert.assertTrue;
 
 /**
- * TC_23
- * This test ensures that an application can be deployed using NebulOuS cloud provider
+ * TC_22
+ * This test ensures that an application can be deployed on a manually managed node
  *
  */
 @ContextConfiguration(classes = {NebulousEndpointConfig.class})
-public class AppDeploymentCloudProviderTest extends TestNGCitrusSpringSupport {
+public class AppDeploymentManuallyManagedNodeTest extends TestNGCitrusSpringSupport {
 
     private final ObjectMapper objectMapper = new ObjectMapper();
 
@@ -52,6 +50,7 @@ public class AppDeploymentCloudProviderTest extends TestNGCitrusSpringSupport {
 
     private MessageSender messageSender;
     private SALConnectionManager salConnectionManager;
+    private ResourceManager resourceManager;
 
     String applicationId =
             new SimpleDateFormat("HHmmssddMM").format(new Date())
@@ -103,8 +102,16 @@ public class AppDeploymentCloudProviderTest extends TestNGCitrusSpringSupport {
     private JmsEndpoint appStatusEndpoint;
 
     @Autowired
+    @Qualifier("salNodeCreation")
+    private JmsEndpoint salNodeCreation;
+
+    @Autowired
     @Qualifier("salEndpoint")
     private HttpClient salEndpoint;
+
+    @Autowired
+    @Qualifier("resourceManagerEndpoint")
+    private HttpClient resourceManagerEndpoint;
 
     @Autowired
     private Environment env;
@@ -122,13 +129,10 @@ public class AppDeploymentCloudProviderTest extends TestNGCitrusSpringSupport {
         // Initialize MessageSender and SALConnectionManager
         messageSender = new MessageSender(qpidAddress, qpidPort, qpidUsername, qpidPassword, applicationId);
         salConnectionManager = new SALConnectionManager(salEndpoint, objectMapper);
+        resourceManager = new ResourceManager(resourceManagerEndpoint,objectMapper,env);
     }
 
-    String mqttBroker = "broker.emqx.io";
-    String mqttPort = "1883";
-    String mqttTopicPrefix = applicationId.replaceAll("-", "");
-    String mqttAppInputTopic = mqttTopicPrefix + "/input";
-    String mqttAppOutputTopic = mqttTopicPrefix + "/output";
+
 
     @Test
     @CitrusTest
@@ -139,10 +143,6 @@ public class AppDeploymentCloudProviderTest extends TestNGCitrusSpringSupport {
         * Define and add here the necessary Environmental Variables that are specified in your Kubevela file
         **/
         appParameters.put("{{REPORT_METRICS_TO_EMS}}", "True");
-        appParameters.put("{{APP_MQTT_BROKER_SERVER}}", mqttBroker);
-        appParameters.put("{{APP_MQTT_BROKER_PORT}}", mqttPort);
-        appParameters.put("{{APP_MQTT_INPUT_TOPIC}}", "$share/workers/" + mqttAppInputTopic);
-        appParameters.put("{{APP_MQTT_OUTPUT_TOPIC}}", mqttAppOutputTopic);
         appParameters.put("{{APP_CPU}}", "4.0");
         appParameters.put("{{APP_RAM}}", "8048Mi");
         appParameters.put("{{APP_EMS_PORT}}", "61610");
@@ -150,11 +150,11 @@ public class AppDeploymentCloudProviderTest extends TestNGCitrusSpringSupport {
         appParameters.put("{{APP_EMS_PASSWORD}}", env.getProperty("app.ems.password"));
 
         Map<String, Object> appCreationPayload = FileTemplatingUtils
-                .loadJSONFileAndSubstitute("app_creation_files/app_creation_message.json", appParameters);
+                .loadJSONFileAndSubstitute("rest-processor-app/app_creation_message.json", appParameters);
         ArrayList<Object> envVars = ((ArrayList<Object>) appCreationPayload.get("environmentVariables"));
 
         appCreationPayload.put("content",
-                FileTemplatingUtils.loadFileAndSubstitute("app_creation_files/kubevela.yaml", appParameters));
+                FileTemplatingUtils.loadFileAndSubstitute("rest-processor-app/kubevela.yaml", appParameters));
 
         ArrayList<Object> resources = ((ArrayList<Object>) appCreationPayload.get("resources"));
         resources.clear();
@@ -182,14 +182,63 @@ public class AppDeploymentCloudProviderTest extends TestNGCitrusSpringSupport {
         envVars.add(Map.of("name", "ONM_URL", "value", Optional.ofNullable(env.getProperty("onm_url")).orElseThrow(() -> new MissingConfigValueException("onm_url")), "secret", "false"));
 
 
+        /*
+        Configure Manually Managed Node
+         */
+        String deviceJson = null;
+        try {
+            // Modify Name, ID, IP, Password/key Path
+            Map<String, String> rmParameters = new HashMap<>();
+            rmParameters.put("{{DEVICE_ID}}", "UbiVM-id-2");
+            rmParameters.put("{{DEVICE_NAME}}", "UbiVM2");
+            rmParameters.put("{{DEVICE_REF}}", "application_id|" + applicationId + "|" + UUID.randomUUID().toString());
+            rmParameters.put("{{DEVICE_PROVIDER}}", "TestingProvider");
+            rmParameters.put("{{DEVICE_IP}}", "13.48.196.8");
+            rmParameters.put("{{DEVICE_PORT}}", "22");
+            rmParameters.put("{{DEVICE_USERNAME}}", "ubuntu");
+            rmParameters.put("{{DEVICE_PASSWORD}}", "");
+
+            // Load key.pem file
+            String keyPath = "src/test/resources/mocks/telefonica.pem";
+            rmParameters.put("{{DEVICE_PUBLIC_KEY}}", FileTemplatingUtils.loadKeyFromFile(keyPath));
+//            appParameters.put("{{DEVICE_PUBLIC_KEY}}", "");
+
+            // Load JSON template and substitute placeholders
+            deviceJson = FileTemplatingUtils.loadJSONFileAndSubstituteAsString(
+                    "app_creation_files/resource_discovery_payload.json", rmParameters);
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
         // Test SAL connection and cloud providers
         assertTrue(salConnectionManager.loginAndGetSessionId(runner), "Connection has been established with SAL");
         assertTrue(salConnectionManager.validateCloudProviders(runner, cloudResource.getUuid()), "The provided cloud is registered on SAL");
+
+        // Test Resource Manager Connection and add Manually Managed Node
+        assertTrue(resourceManager.loginAndGetSessionId(runner), "Connection has been established with Resource Manager");
+        assertTrue(resourceManager.registerDevice(runner, deviceJson), "Request for Device Registration has been sent");
 
 
         // Header Selectors for receiving published message
         Map<String, String> selectorMap = new HashMap<>();
         selectorMap.put("application", applicationId);
+
+
+        //Assert that the node has been added to sal
+        $(receive(salNodeCreation)
+                .message()
+                .selector(selectorMap)
+                .timeout(20 * 60 * 1000)
+                .validate((message, context) -> {
+                    // print debug message
+                    logger.debug("salNodeCreation payload received");
+                    logger.info("Node has been added to sal");
+                    logger.info(message.getPayload().toString());
+                    // Ignore body
+                }));
+
+
 
         logger.info(objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(appCreationPayload));
 
@@ -209,7 +258,7 @@ public class AppDeploymentCloudProviderTest extends TestNGCitrusSpringSupport {
         /*
          * Send metric model and assert is correctly received by any subscriber
          **/
-        Map<String, Object> metricModelPayload = FileTemplatingUtils.loadJSONFileAndSubstitute("app_creation_files/metric_model.json",
+        Map<String, Object> metricModelPayload = FileTemplatingUtils.loadJSONFileAndSubstitute("rest-processor-app/metric_model.json",
                 Map.of("{{APP_ID}}", applicationId));
 
 
@@ -318,7 +367,7 @@ public class AppDeploymentCloudProviderTest extends TestNGCitrusSpringSupport {
         $(receive(defineClusterEndpoint)
                 .message()
                 .selector(selectorMap)
-                .timeout(30000)
+                .timeout(15 * 60 * 1000)
                 .validate((message, context) -> {
                     // print debug message
                     logger.debug("Message that optimizer defined the cluster received");

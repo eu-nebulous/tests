@@ -22,6 +22,7 @@ jms:
       optimiser_define_cluster: 'eu.nebulouscloud.exn.sal.cluster.define'
       optimiser_deploy_cluster: 'eu.nebulouscloud.exn.sal.cluster.deploy'
       optimiser_controller_state: 'eu.nebulouscloud.optimiser.controller.app_state'
+      sal_node_create: "eu.nebulouscloud.exn.sal.node.create"
 
 
 
@@ -31,16 +32,10 @@ sal:
     username: '${SAL_API_USER}'
     password: '${SAL_API_USER}'
 
-app:
-  ems:
-    username: '${APP_EMS_USER}'
-    password: '${APP_EMS_PASSWORD}'
-
-docker:
-  server: '${PRIVATE_DOCKER_REGISTRY_SERVER}'
-  username: '${PRIVATE_DOCKER_REGISTRY_USERNAME}'
-  password: '${PRIVATE_DOCKER_REGISTRY_PASSWORD}'
-  email: '${PRIVATE_DOCKER_REGISTRY_EMAIL}'
+resource_manager:
+  url: '${RESOURCE_MANAGER_URL}'
+  username: '${RESOURCE_MANAGER_USERNAME}'
+  password: '${RESOURCE_MANAGER_PASSWORD}'
 
 onm_url: '${ONM_URL}'
 
@@ -50,3 +45,14 @@ cloud_resources:
   platform: '${CLOUD_RESOURCES_PLATFORM}'
   enabled: '${CLOUD_RESOURCES_ENABLED}'
   regions: '${CLOUD_RESOURCES_REGIONS}'
+
+docker:
+  server: '${PRIVATE_DOCKER_REGISTRY_SERVER}'
+  username: '${PRIVATE_DOCKER_REGISTRY_USERNAME}'
+  password: '${PRIVATE_DOCKER_REGISTRY_PASSWORD}'
+  email: '${PRIVATE_DOCKER_REGISTRY_EMAIL}'
+
+app:
+  ems:
+    username: '${APP_EMS_USER}'
+    password: '${APP_EMS_PASSWORD}'

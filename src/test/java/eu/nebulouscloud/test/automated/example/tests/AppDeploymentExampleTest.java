@@ -7,11 +7,8 @@ import eu.nebulouscloud.exceptions.InvalidFormatException;
 import eu.nebulouscloud.model.CloudResources;
 import eu.nebulouscloud.model.NebulousCoreMessage;
 import eu.nebulouscloud.test.automated.tests.NebulousEndpointConfig;
-import eu.nebulouscloud.util.FileTemplatingUtils;
+import eu.nebulouscloud.util.*;
 import eu.nebulouscloud.exceptions.MissingConfigValueException;
-import eu.nebulouscloud.util.MessageSender;
-import eu.nebulouscloud.util.SALConnectionManager;
-import eu.nebulouscloud.util.StringToMapParser;
 import org.citrusframework.TestCaseRunner;
 import org.citrusframework.TestCaseRunnerFactory;
 import org.citrusframework.annotations.CitrusTest;
@@ -59,12 +56,13 @@ public class AppDeploymentExampleTest extends TestNGCitrusSpringSupport {
 
     private MessageSender messageSender;
     private SALConnectionManager salConnectionManager;
+    private ResourceManager resourceManager;
 
-    String applicationId = new SimpleDateFormat("HHmmssddMM").format(new Date())
-            + "automated-testing-mqtt-app-"
-            + new Date().getTime();
+//    String applicationId = new SimpleDateFormat("HHmmssddMM").format(new Date())
+//            + "automated-testing-app-"
+//            + new Date().getTime();
 
-
+    String applicationId = "6e99996f-1b55-44a8-84b4-b5dc100bea61-testing-application";
 
     @Autowired
     @Qualifier("appCreationEndpoint")
@@ -115,6 +113,10 @@ public class AppDeploymentExampleTest extends TestNGCitrusSpringSupport {
     private HttpClient salEndpoint;
 
     @Autowired
+    @Qualifier("resourceManagerEndpoint")
+    private HttpClient resourceManagerEndpoint;
+
+    @Autowired
     private Environment env;
 
 
@@ -134,9 +136,10 @@ public class AppDeploymentExampleTest extends TestNGCitrusSpringSupport {
         String qpidUsername = env.getProperty("qpid-jms.username");
         String qpidPassword = env.getProperty("qpid-jms.password");
 
-        // Initialize MessageSender and SALConnectionManager
+        // Initialize ResourceManager, MessageSender and SALConnectionManager
         messageSender = new MessageSender(qpidAddress, qpidPort, qpidUsername, qpidPassword, applicationId);
         salConnectionManager = new SALConnectionManager(salEndpoint, objectMapper);
+        resourceManager = new ResourceManager(resourceManagerEndpoint,objectMapper,env);
 
 //        context.getMessageValidatorRegistry().addMessageValidator("simple", new MessageValidator<>() {
 //            @Override
@@ -153,7 +156,7 @@ public class AppDeploymentExampleTest extends TestNGCitrusSpringSupport {
 
     @Test
     @CitrusTest
-    public void test() throws Exception {
+    public void mqttApplicationTest() throws Exception {
         Map<String, String> appParameters = new HashMap<>();
         appParameters.put("{{APP_ID}}", applicationId);
         appParameters.put("{{APP_MQTT_BROKER_SERVER}}", mqttBroker);
@@ -225,6 +228,7 @@ public class AppDeploymentExampleTest extends TestNGCitrusSpringSupport {
                 .validate((message, context) -> {
                     // print debug message
                     logger.info("appCreationPayload payload received");
+                    logger.info(message.getPayload());
                     // Ignore body
                 }));
 
@@ -257,7 +261,7 @@ public class AppDeploymentExampleTest extends TestNGCitrusSpringSupport {
         $(receive(evaluatorEndpoint)
                 .message()
                 .selector(selectorMap)
-                .timeout(10000)
+                .timeout(100000)
                 .validate((message, context) -> {
                     // print debug message
                     logger.info("Message from Evaluator received");
@@ -327,7 +331,7 @@ public class AppDeploymentExampleTest extends TestNGCitrusSpringSupport {
         $(receive(nodeCandidatesReplyCFSBEndpoint)
                 .message()
                 .selector(selectorMap)
-                .timeout(8000)
+                .timeout(30000)
                 .validate((message, context) -> {
                     // print debug message
                     logger.info("Message that optimizer receives an answer on node candidates from CFSB , received");
@@ -394,24 +398,26 @@ public class AppDeploymentExampleTest extends TestNGCitrusSpringSupport {
                 })
         );
         //TODO To be changed with relevant endpoint according to the ordiginal !?
-        logger.info("Wait for a message from optimizer controller to solver with the AMPL File");
-        $(receive(getAMPLfileEndpoint)
-                .message()
-                .selector(selectorMap)
-                .timeout(8000)
-                .validate((message, context) -> {
-                    // print debug message
-                    logger.debug("Message that optimizer deploys the cluster received");
-                    logger.info(message.getPayload().toString());
-                    // Ignore body
-                })
-        );
+//        logger.info("Wait for a message from optimizer controller to solver with the AMPL File");
+//        $(receive(getAMPLfileEndpoint)
+//                .message()
+//                .selector(selectorMap)
+//                .timeout(8000)
+//                .validate((message, context) -> {
+//                    // print debug message
+//                    logger.debug("Message that optimizer deploys the cluster received");
+//                    logger.info(message.getPayload().toString());
+//                    // Ignore body
+//                })
+//        );
 
         /**
          * Assert that the cluster is ready
          */
-        Assert.assertEquals(salConnectionManager.getClusterStatus(runner, clusterName), "deployed", "Cluster has been successfully deployed");
-
+        Assert.assertTrue(
+                salConnectionManager.getClusterStatus(runner, clusterName).equalsIgnoreCase("deployed"),
+                "Cluster has been successfully deployed"
+        );
         /**
          * Assert that App is ready and running
          */
@@ -478,6 +484,331 @@ public class AppDeploymentExampleTest extends TestNGCitrusSpringSupport {
 
     @Test
     @CitrusTest
+    public void restApplicationTest() throws Exception {
+        Map<String, String> appParameters = new HashMap<>();
+        appParameters.put("{{APP_ID}}", applicationId);
+        appParameters.put("{{REPORT_METRICS_TO_EMS}}", "True");
+        appParameters.put("{{APP_CPU}}", "4.0");
+        appParameters.put("{{APP_RAM}}", "8048Mi");
+        appParameters.put("{{APP_EMS_PORT}}", "61610");
+        appParameters.put("{{APP_EMS_USER}}", env.getProperty("app.ems.username"));
+        appParameters.put("{{APP_EMS_PASSWORD}}", env.getProperty("app.ems.password"));
+
+        Map<String, Object> appCreationPayload = FileTemplatingUtils
+                .loadJSONFileAndSubstitute("rest-processor-app/app_creation_message.json", appParameters);
+        ArrayList<Object> envVars = ((ArrayList<Object>) appCreationPayload.get("environmentVariables"));
+
+        appCreationPayload.put("content",
+                FileTemplatingUtils.loadFileAndSubstitute("rest-processor-app/kubevela.yaml", appParameters));
+
+        ArrayList<Object> resources = ((ArrayList<Object>) appCreationPayload.get("resources"));
+        resources.clear();
+//        resources.add(Map.of("uuid", "aws-automated-testing", "title", "", "platform", "", "enabled", "true", "regions", "us-east-1"));
+//        resources.add(Map.of("uuid", "c9a625c7-f705-4128-948f-6b5765509029", "title", "blah", "platform", "AWS", "enabled", "true","regions","us-east-1"));
+//        resources.add(Map.of("uuid", "uio-openstack-optimizer", "title", "whatever", "platform", "whatever", "enabled", "true","regions","bgo"));
+
+        /**
+         * Config the cloud id
+         */
+        CloudResources cloudResource = new CloudResources(
+                Optional.ofNullable(env.getProperty("cloud_resources.uuid")).orElseThrow(() -> new MissingConfigValueException("cloud_resources.uuid")),
+                Optional.ofNullable(env.getProperty("cloud_resources.title")).orElseThrow(() -> new MissingConfigValueException("cloud_resources.title")),
+                Optional.ofNullable(env.getProperty("cloud_resources.platform")).orElseThrow(() -> new MissingConfigValueException("cloud_resources.platform")),
+                Optional.ofNullable(env.getProperty("cloud_resources.enabled")).orElseThrow(() -> new MissingConfigValueException("cloud_resources.enabled")),
+                Optional.ofNullable(env.getProperty("cloud_resources.regions")).orElseThrow(() -> new MissingConfigValueException("cloud_resources.regions"))
+        );
+        resources.add(cloudResource.toMap());
+
+
+        // Configure docker registry
+        envVars.add(Map.of("name", "PRIVATE_DOCKER_REGISTRY_SERVER", "value", Optional.ofNullable(env.getProperty("docker.server")).orElseThrow(() ->new MissingConfigValueException("docker.server")),"secret","false"));
+        envVars.add(Map.of("name", "PRIVATE_DOCKER_REGISTRY_USERNAME", "value", Optional.ofNullable(env.getProperty("docker.username")).orElseThrow(() ->new MissingConfigValueException("docker.username")),"secret","false"));
+        envVars.add(Map.of("name", "PRIVATE_DOCKER_REGISTRY_PASSWORD", "value", Optional.ofNullable(env.getProperty("docker.password")).orElseThrow(() ->new MissingConfigValueException("docker.password")),"secret","false"));
+        envVars.add(Map.of("name", "PRIVATE_DOCKER_REGISTRY_EMAIL", "value", Optional.ofNullable(env.getProperty("docker.email")).orElseThrow(() ->new MissingConfigValueException("docker.email")),"secret","false"));
+        envVars.add(Map.of("name", "ONM_URL", "value", Optional.ofNullable(env.getProperty("onm_url")).orElseThrow(() ->new MissingConfigValueException("onm_url")),"secret","false"));
+
+
+
+        // Test SAL connection and cloud providers
+        salConnectionManager.loginAndGetSessionId(runner);
+//        salConnectionManager.connectAndValidateCloudProvider(runner, cloudResource.getUuid());
+
+        /**
+         * Header Selectors for receiving published message
+         */
+        Map<String, String> selectorMap = new HashMap<>();
+        selectorMap.put("application", applicationId);
+
+        logger.info(objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(appCreationPayload));
+
+        NebulousCoreMessage appCreationMessage = new NebulousCoreMessage(appCreationPayload,env.getProperty("jms.topic.nebulous.optimiser"));
+        messageSender.sendMessage(appCreationMessage);
+
+
+
+        $(receive(appCreationEndpoint)
+                .message()
+                .selector(selectorMap)
+                .validate((message, context) -> {
+                    // print debug message
+                    logger.info("appCreationPayload payload received");
+                    // Ignore body
+                }));
+
+        /**
+         * Send metric model and assert is correctly received by any subscriber
+         */
+        Map<String, Object> metricModelPayload = FileTemplatingUtils.loadJSONFileAndSubstitute("rest-processor-app/metric_model.json",
+                Map.of("{{APP_ID}}", applicationId));
+
+
+        logger.info(objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(metricModelPayload));
+
+        NebulousCoreMessage metricModelMessage = new NebulousCoreMessage(metricModelPayload,env.getProperty("jms.topic.nebulous.metric_model"));
+        messageSender.sendMessage(metricModelMessage);
+
+
+        $(receive(metricModelEndpoint)
+                .message()
+                .selector(selectorMap)
+                .validate((message, context) -> {
+                    // print debug message
+                    logger.info("metricModelPayload payload received");
+                    // Ignore body
+                })
+        );
+        /**
+         * Wait for utility evaluator to start
+         */
+        logger.info("Wait for utility evaluator to start");
+        $(receive(evaluatorEndpoint)
+                .message()
+                .selector(selectorMap)
+                .timeout(100000)
+                .validate((message, context) -> {
+                    // print debug message
+                    logger.info("Message from Evaluator received");
+                    logger.info(message);
+                    // Ignore body
+                })
+        );
+
+
+        /**
+         * Assert that Optimizer controller requests for node candidates for the
+         * application cluster
+         */
+        NebulousCoreMessage nodeRequestToCFSBmessage = new NebulousCoreMessage();
+        logger.info("Wait for optimizer to request node candidates");
+        $(receive(nodeCandidatesRequestCFSBEndpoint)
+                .message()
+                .selector(selectorMap)
+                .timeout(100000)
+                .validate((message, context) -> {
+                    // print debug message
+                    logger.info("Message to request candidates received");
+                    logger.info(message);
+                    assertTrue(message.getHeader("citrus_jms_correlationId") != null);
+                    nodeRequestToCFSBmessage.setCorrelationId(message.getHeader("citrus_jms_correlationId").toString());
+                    // Ignore body
+                })
+        );
+
+        NebulousCoreMessage nodeRequestToSALmessage = new NebulousCoreMessage();
+        $(receive(nodeCandidatesRequestSALEndpoint)
+                .message()
+                .selector(selectorMap)
+                .timeout(10000)
+                .validate((message, context) -> {
+                    // print debug message
+                    logger.info("Message to request candidates received from SAL");
+                    logger.info(message);
+                    assertTrue(message.getHeader("citrus_jms_correlationId") != null);
+                    nodeRequestToSALmessage.setCorrelationId(message.getHeader("citrus_jms_correlationId").toString());
+                    // Ignore body
+                })
+        );
+
+        /**
+         * Assert that SAL anwsers the request
+         */
+        logger.info("Wait for CFSB to recieve an answer on node candidates from SAL");
+        $(receive(nodeCandidatesReplySALEndpoint)
+                .message()
+                .selector(selectorMap)
+                .timeout(3000)
+                .validate((message, context) -> {
+                    // print debug message
+                    logger.info("Message that CFSB receives an answer on node candidates from SAL , received");
+                    logger.info(message);
+                    assertTrue(nodeRequestToSALmessage.getCorrelationId().equals(message.getHeader("citrus_jms_correlationId").toString()));
+                    // Ignore body
+                })
+        );
+
+
+        /**
+         * Assert that CFSB anwsers the request
+         */
+        logger.info("Wait for optimizer to recieve an answer on node candidates from CFSB");
+        $(receive(nodeCandidatesReplyCFSBEndpoint)
+                .message()
+                .selector(selectorMap)
+                .timeout(30000)
+                .validate((message, context) -> {
+                    // print debug message
+                    logger.info("Message that optimizer receives an answer on node candidates from CFSB , received");
+                    logger.info(message);
+                    assertTrue(nodeRequestToCFSBmessage.getCorrelationId().equals(message.getHeader("citrus_jms_correlationId").toString()));
+                    // Ignore body
+                })
+        );
+
+        /**
+         * Wait for optimizer to define cluster
+         */
+        NebulousCoreMessage defineCluster = new NebulousCoreMessage();
+        logger.info("Wait for optimizer to define cluster");
+        $(receive(defineClusterEndpoint)
+                .message()
+                .selector(selectorMap)
+                .timeout(50000)
+                .validate((message, context) -> {
+                    // print debug message
+                    logger.info("Message that optimizer defined the cluster received");
+                    try {
+                        Map<String, Object> messageMap = parser.parseStringToMap(message.getPayload().toString());
+                        defineCluster.setPayload(messageMap);
+                    } catch (InvalidFormatException e) {
+                        logger.error("Failed to parse input: " + e.getMessage());
+                    }
+                })
+        );
+        String clusterName = null;
+        if (defineCluster.getPayload().containsKey("body")) {
+            Object bodyObject = defineCluster.getPayload().get("body");
+
+            if (bodyObject instanceof Map) {
+                Map<String, Object> bodyMap = (Map<String, Object>) bodyObject;
+                Object nameObject = bodyMap.get("name");
+
+                if (nameObject instanceof String name) {
+                    logger.info("Cluster name: " + name);
+                    clusterName = name;
+                } else {
+                    logger.error("Name is not a string.");
+                }
+            } else {
+                logger.error("Body is not a map.");
+            }
+        } else {
+            logger.error("Result does not contain 'body'.");
+        }
+
+        /**
+         * Assert that Optimiser deploys the cluster
+         */
+        logger.info("Wait for optimizer to deploy cluster");
+        $(receive(deployClusterEndpoint)
+                .message()
+                .selector(selectorMap)
+                .timeout(8000)
+                .validate((message, context) -> {
+                    // print debug message
+                    logger.debug("Message that optimizer deploys the cluster received");
+                    logger.info(message.getPayload().toString());
+                    // Ignore body
+                })
+        );
+        //TODO To be changed with relevant endpoint according to the original !?
+//        logger.info("Wait for a message from optimizer controller to solver with the AMPL File");
+//        $(receive(getAMPLfileEndpoint)
+//                .message()
+//                .selector(selectorMap)
+//                .timeout(8000)
+//                .validate((message, context) -> {
+//                    // print debug message
+//                    logger.debug("Message that optimizer deploys the cluster received");
+//                    logger.info(message.getPayload().toString());
+//                    // Ignore body
+//                })
+//        );
+
+        /**
+         * Assert that the cluster is ready
+         */
+        Assert.assertTrue(
+                salConnectionManager.getClusterStatus(runner, clusterName).equalsIgnoreCase("deployed"),
+                "Cluster has been successfully deployed"
+        );
+
+        /**
+         * Assert that App is ready and running
+         */
+        NebulousCoreMessage appStatus = new NebulousCoreMessage();
+        AtomicBoolean success = new AtomicBoolean(false);
+        int retryIntervalMillis = 5000;
+        AtomicBoolean keepLooping = new AtomicBoolean(true);
+        while (keepLooping.get() && !success.get()) {
+            try {
+                $(receive(appStatusEndpoint)
+                        .message()
+                        .name("appStatus")
+                        .selector(selectorMap)
+                        .timeout(60 * 60 * 1000) //60min 60sec 1000ms
+                        .validate((message, context) -> {
+                            // Print debug message
+                            logger.debug("Message of app status");
+                            logger.info(message.getPayload().toString());
+                            try {
+                                Map<String, Object> messageMap = parser.parseStringToMap(message.getPayload().toString());
+                                appStatus.setPayload(messageMap);
+
+                                String state = (String) appStatus.getPayload().get("state");
+
+                                if ("RUNNING".equals(state)) {
+                                    success.set(true);
+                                    keepLooping.set(false);
+                                } else if ("FAILED".equals(state)) {
+                                    keepLooping.set(false);
+                                    throw new CitrusRuntimeException("Received message with state FAILED, stopping the test.");
+                                } else {
+                                    logger.info("Received message with state: " + state + ". Continuing to check...");
+                                }
+                            } catch (InvalidFormatException e) {
+                                logger.error("Failed to parse input: " + e.getMessage());
+                            }
+                        })
+                );
+            } catch (ActionTimeoutException e) {
+                logger.warn("No message received within timeout, retrying...");
+            } catch (AssertionError | CitrusRuntimeException e) {
+                logger.error("Validation failed or message state is 'FAILED', stopping the test.", e);
+                throw e;  // Propagate the error if state is "FAILED" or validation failed
+            }
+
+            // Wait for the retry interval if not yet successful
+            if (!success.get() && keepLooping.get()) {
+                try {
+                    Thread.sleep(retryIntervalMillis);
+                } catch (InterruptedException ie) {
+                    logger.error("Sleep interrupted", ie);
+                }
+            }
+        }
+        if (success.get()) {
+            logger.info("App successfully reached the 'RUNNING' state.");
+            Assert.assertTrue(success.get(), "App has been successfully deployed and is running.");
+        } else {
+            logger.error("App did not reach the 'RUNNING' state within the timeout period.");
+            Assert.fail("App did not reach the 'RUNNING' state within the timeout period.");
+        }
+    }
+
+
+
+    @Test
+    @CitrusTest
     public void singleEndpointTest()  {
 
         JmsEndpoint endpoint = appStatusEndpoint;
@@ -525,5 +856,44 @@ public class AppDeploymentExampleTest extends TestNGCitrusSpringSupport {
                     }
                 })
         );
+    }
+
+    @Test
+    @CitrusTest
+    public void rmEndpointTest() throws Exception {
+        resourceManager.loginAndGetSessionId(runner);
+        String deviceJson = null;
+        try {
+            Map<String, String> appParameters = new HashMap<>();
+            appParameters.put("{{DEVICE_ID}}", "UbiVM-id-1");
+            appParameters.put("{{DEVICE_NAME}}", "UbiVM1");
+            appParameters.put("{{DEVICE_REF}}", "application_id|"+applicationId+"|c742b366-283f-4113-94ce-37038c649f52");
+            appParameters.put("{{DEVICE_PROVIDER}}", "TestingProvider");
+            appParameters.put("{{DEVICE_IP}}", "16.16.212.155");
+            appParameters.put("{{DEVICE_PORT}}", "22");
+            appParameters.put("{{DEVICE_USERNAME}}", "ubuntu");
+            appParameters.put("{{DEVICE_PASSWORD}}", "");
+
+            // Load key.pem file
+            String keyPath = "src/test/resources/mocks/telefonica.pem";
+            appParameters.put("{{DEVICE_PUBLIC_KEY}}", FileTemplatingUtils.loadKeyFromFile(keyPath));
+//            appParameters.put("{{DEVICE_PUBLIC_KEY}}", "");
+
+            // Load JSON template and substitute placeholders
+            deviceJson = FileTemplatingUtils.loadJSONFileAndSubstituteAsString(
+                    "mocks/resource_discovery_payload.json", appParameters);
+
+            // Pretty-print JSON before sending
+            JsonNode jsonNode = objectMapper.readTree(deviceJson);
+            String prettyJson = objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(jsonNode);
+
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+        // Step 3: Register the device
+        boolean success = resourceManager.registerDevice(runner, deviceJson);
+
     }
 }
