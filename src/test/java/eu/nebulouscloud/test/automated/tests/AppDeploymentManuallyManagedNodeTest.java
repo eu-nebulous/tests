@@ -199,7 +199,7 @@ public class AppDeploymentManuallyManagedNodeTest extends TestNGCitrusSpringSupp
             rmParameters.put("{{DEVICE_PASSWORD}}", "");
 
             // Load key.pem file
-            String keyPath = "src/test/resources/mocks/telefonica.pem";
+            String keyPath = "src/test/resources/mocks/key.pem";
             rmParameters.put("{{DEVICE_PUBLIC_KEY}}", FileTemplatingUtils.loadKeyFromFile(keyPath));
 //            appParameters.put("{{DEVICE_PUBLIC_KEY}}", "");
 
