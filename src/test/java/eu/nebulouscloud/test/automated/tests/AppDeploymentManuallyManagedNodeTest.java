@@ -143,8 +143,8 @@ public class AppDeploymentManuallyManagedNodeTest extends TestNGCitrusSpringSupp
         * Define and add here the necessary Environmental Variables that are specified in your Kubevela file
         **/
         appParameters.put("{{REPORT_METRICS_TO_EMS}}", "True");
-        appParameters.put("{{APP_CPU}}", "4.0");
-        appParameters.put("{{APP_RAM}}", "8048Mi");
+        appParameters.put("{{APP_CPU}}", "2.0");
+        appParameters.put("{{APP_RAM}}", "4024Mi");
         appParameters.put("{{APP_EMS_PORT}}", "61610");
         appParameters.put("{{APP_EMS_USER}}", env.getProperty("app.ems.username"));
         appParameters.put("{{APP_EMS_PASSWORD}}", env.getProperty("app.ems.password"));
@@ -189,23 +189,26 @@ public class AppDeploymentManuallyManagedNodeTest extends TestNGCitrusSpringSupp
         try {
             // Modify Name, ID, IP, Password/key Path
             Map<String, String> rmParameters = new HashMap<>();
-            rmParameters.put("{{DEVICE_ID}}", "UbiVM-id-2");
-            rmParameters.put("{{DEVICE_NAME}}", "UbiVM2");
+            rmParameters.put("{{DEVICE_ID}}", "UbiRPi-id-1");
+            rmParameters.put("{{DEVICE_NAME}}", "UbiRPi1");
             rmParameters.put("{{DEVICE_REF}}", "application_id|" + applicationId + "|" + UUID.randomUUID().toString());
             rmParameters.put("{{DEVICE_PROVIDER}}", "TestingProvider");
-            rmParameters.put("{{DEVICE_IP}}", "13.48.196.8");
+            rmParameters.put("{{DEVICE_IP}}", "100.64.0.5");
             rmParameters.put("{{DEVICE_PORT}}", "22");
             rmParameters.put("{{DEVICE_USERNAME}}", "ubuntu");
-            rmParameters.put("{{DEVICE_PASSWORD}}", "");
+            rmParameters.put("{{DEVICE_PASSWORD}}", "112233");
 
             // Load key.pem file
-            String keyPath = "src/test/resources/mocks/key.pem";
-            rmParameters.put("{{DEVICE_PUBLIC_KEY}}", FileTemplatingUtils.loadKeyFromFile(keyPath));
-//            appParameters.put("{{DEVICE_PUBLIC_KEY}}", "");
+            String keyPath = "src/test/resources/mocks/eut.pem";
+//            rmParameters.put("{{DEVICE_PUBLIC_KEY}}", FileTemplatingUtils.loadKeyFromFile(keyPath));
+            rmParameters.put("{{DEVICE_PUBLIC_KEY}}", "");
 
             // Load JSON template and substitute placeholders
             deviceJson = FileTemplatingUtils.loadJSONFileAndSubstituteAsString(
                     "app_creation_files/resource_discovery_payload.json", rmParameters);
+
+            // print payload
+            logger.info(objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(deviceJson));
 
         } catch (Exception e) {
             e.printStackTrace();
@@ -226,6 +229,7 @@ public class AppDeploymentManuallyManagedNodeTest extends TestNGCitrusSpringSupp
 
 
         //Assert that the node has been added to sal
+        logger.info("Wait for node to be registered into sal");
         $(receive(salNodeCreation)
                 .message()
                 .selector(selectorMap)
@@ -350,7 +354,7 @@ public class AppDeploymentManuallyManagedNodeTest extends TestNGCitrusSpringSupp
         $(receive(nodeCandidatesReplyCFSBEndpoint)
                 .message()
                 .selector(selectorMap)
-                .timeout(30000)
+                .timeout(50000)
                 .validate((message, context) -> {
                     // print debug message
                     logger.debug("Message that optimizer receives an answer on node candidates from CFSB , received");

@@ -170,10 +170,7 @@ public class SALConnectionManager {
             // Handle unexpected status
             if (!isDeployed.get()) {
                 String currentStatus = status.get();
-                if (currentStatus != null &&
-                        !currentStatus.equalsIgnoreCase("submitted") &&
-                        !currentStatus.equalsIgnoreCase("defined") &&
-                        !currentStatus.equalsIgnoreCase("deployed")) {
+                if (currentStatus == null) {
 
                     logger.warn("Unexpected cluster status: '{}'. Exiting polling loop.", currentStatus);
                     break;

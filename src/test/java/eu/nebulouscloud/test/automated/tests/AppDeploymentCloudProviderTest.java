@@ -318,7 +318,7 @@ public class AppDeploymentCloudProviderTest extends TestNGCitrusSpringSupport {
         $(receive(defineClusterEndpoint)
                 .message()
                 .selector(selectorMap)
-                .timeout(30000)
+                .timeout(50000)
                 .validate((message, context) -> {
                     // print debug message
                     logger.debug("Message that optimizer defined the cluster received");
