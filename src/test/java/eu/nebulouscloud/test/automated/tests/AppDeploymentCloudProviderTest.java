@@ -150,11 +150,11 @@ public class AppDeploymentCloudProviderTest extends TestNGCitrusSpringSupport {
         appParameters.put("{{APP_EMS_PASSWORD}}", env.getProperty("app.ems.password"));
 
         Map<String, Object> appCreationPayload = FileTemplatingUtils
-                .loadJSONFileAndSubstitute("app_creation_files/app_creation_message.json", appParameters);
+                .loadJSONFileAndSubstitute("mqtt_processor_app/app_creation_message.json", appParameters);
         ArrayList<Object> envVars = ((ArrayList<Object>) appCreationPayload.get("environmentVariables"));
 
         appCreationPayload.put("content",
-                FileTemplatingUtils.loadFileAndSubstitute("app_creation_files/kubevela.yaml", appParameters));
+                FileTemplatingUtils.loadFileAndSubstitute("mqtt_processor_app/kubevela.yaml", appParameters));
 
         ArrayList<Object> resources = ((ArrayList<Object>) appCreationPayload.get("resources"));
         resources.clear();
@@ -209,7 +209,7 @@ public class AppDeploymentCloudProviderTest extends TestNGCitrusSpringSupport {
         /*
          * Send metric model and assert is correctly received by any subscriber
          **/
-        Map<String, Object> metricModelPayload = FileTemplatingUtils.loadJSONFileAndSubstitute("app_creation_files/metric_model.json",
+        Map<String, Object> metricModelPayload = FileTemplatingUtils.loadJSONFileAndSubstitute("mqtt_processor_app/metric_model.json",
                 Map.of("{{APP_ID}}", applicationId));
 
 

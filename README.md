@@ -4,6 +4,39 @@ This project utilizes the **Citrus Framework** to automate **integration testing
 The tests focus on validating the interaction between components through **AMQP messaging queues**, **SAL REST APIs**, **Resource Manager APIs** and utility APIs that support application deployment workflows and general platform operations—ensuring the system behaves as expected.
 purpose of this project is to automate the following test cases related to application deployment:
 
+
+### TC_23 App Deployment (NebulOuS Cloud Providers)
+The **TC_23 App** deployment using NebulOuS cloud providers is fully dockerized.  
+You can easily build and run the application using Docker.
+
+#### Build the Docker Image
+
+```bash
+docker build -t tc23 .
+```
+
+#### Environment Variables
+The following environment variables must be configured and provided at runtime in order for the test to execute successfully. These variables can be set directly or mounted via an environment file (e.g. using `--env-file` when running the container or pod).
+
+| Variable | Description                                                                                                                                         |
+| -------- |-----------------------------------------------------------------------------------------------------------------------------------------------------|
+| `SAL_API_URL` | URL of the SAL API service (local execution: `http://localhost:8088` cluster deployment: `http://nebulous-sal.nebulous-cd.svc.cluster.local:8080`). |
+| `SAL_API_USER` | Username for authenticating with the SAL API.                                                                                                       |
+| `SAL_API_PASSWORD` | Password for authenticating with the SAL API.                                                                                                       |
+| `NEBULOUS_BROKER_ADDRESS` | Address of the message broker (default: `localhost`, cluster deployment: `nebulous-activemq.nebulous-cd.svc.cluster.local`).                        |
+| `NEBULOUS_BROKER_URL` | Full URL of the message broker (default: `amqp://localhost:5672`, cluster deployment: `amqp://nebulous-activemq.nebulous-cd.svc.cluster.local:5672`).                                                            |
+| `NEBULOUS_BROKER_USERNAME` | Username for the message broker authentication.                                                                                                     |
+| `NEBULOUS_BROKER_PASSWORD` | Password for the message broker authentication.                                                                                                     |
+| `CLOUD_RESOURCES_UUID` | Unique identifier for the cloud resources.                                                                                                          |
+| `CLOUD_RESOURCES_TITLE` | Title/name for the cloud resources.                                                                                                                 |
+| `CLOUD_RESOURCES_PLATFORM` | Platform name or type for the cloud resources.                                                                                                      |
+| `CLOUD_RESOURCES_ENABLED` | Flag to enable/disable the cloud resources.                                                                                                         |
+| `CLOUD_RESOURCES_REGIONS` | Comma-separated list of regions for cloud resources.                                                                                                |
+| `RESOURCE_MANAGER_URL` | URL of the Resource Manager service.                                                                                                                |
+| `RESOURCE_MANAGER_USERNAME` | Username for authenticating with Resource Manager.                                                                                                  |
+| `RESOURCE_MANAGER_PASSWORD` | Password for authenticating with Resource Manager.                                                                                                  |
+
+
 ## Test Cases
 
 | Test Case ID | Description                                                 | Status      |

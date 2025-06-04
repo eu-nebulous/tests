@@ -1,6 +1,6 @@
 qpid-jms:
-  url: 'amqp://localhost:5672'
-  address: 'localhost'
+  url:  '${NEBULOUS_BROKER_URL:amqp://localhost:5672}'
+  address: '${NEBULOUS_BROKER_ADDRESS:localhost}'
   port: 5672
   username: '${NEBULOUS_BROKER_USERNAME:admin}'
   password: '${NEBULOUS_BROKER_PASSWORD:nebulous}'
@@ -53,6 +53,10 @@ docker:
   email: '${PRIVATE_DOCKER_REGISTRY_EMAIL}'
 
 app:
+  files:
+    creation_message: '${APP_CREATION_MESSAGE:app_creation_files/app_creation_message.json}'
+    kubevela: '${KUBEVELA_FILE:app_creation_files/kubevela.yaml}'
+    metric_model: '${METRIC_MODEL:app_creation_files/metric_model.json}'
   ems:
     username: '${APP_EMS_USER}'
     password: '${APP_EMS_PASSWORD}'

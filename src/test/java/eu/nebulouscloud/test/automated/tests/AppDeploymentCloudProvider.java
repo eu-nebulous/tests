@@ -5,7 +5,10 @@ import eu.nebulouscloud.exceptions.InvalidFormatException;
 import eu.nebulouscloud.exceptions.MissingConfigValueException;
 import eu.nebulouscloud.model.CloudResources;
 import eu.nebulouscloud.model.NebulousCoreMessage;
-import eu.nebulouscloud.util.*;
+import eu.nebulouscloud.util.FileTemplatingUtils;
+import eu.nebulouscloud.util.MessageSender;
+import eu.nebulouscloud.util.SALConnectionManager;
+import eu.nebulouscloud.util.StringToMapParser;
 import org.citrusframework.TestCaseRunner;
 import org.citrusframework.TestCaseRunnerFactory;
 import org.citrusframework.annotations.CitrusTest;
@@ -32,12 +35,12 @@ import static org.citrusframework.actions.ReceiveMessageAction.Builder.receive;
 import static org.testng.Assert.assertTrue;
 
 /**
- * TC_22
- * This test ensures that an application can be deployed on a manually managed node
+ * TC_23
+ * This test ensures that an application can be deployed using NebulOuS cloud provider
  *
  */
 @ContextConfiguration(classes = {NebulousEndpointConfig.class})
-public class AppDeploymentManuallyManagedNodeTest extends TestNGCitrusSpringSupport {
+public class AppDeploymentCloudProvider extends TestNGCitrusSpringSupport {
 
     private final ObjectMapper objectMapper = new ObjectMapper();
 
@@ -49,7 +52,6 @@ public class AppDeploymentManuallyManagedNodeTest extends TestNGCitrusSpringSupp
 
     private MessageSender messageSender;
     private SALConnectionManager salConnectionManager;
-    private ResourceManager resourceManager;
 
     String applicationId =
             new SimpleDateFormat("HHmmssddMM").format(new Date())
@@ -101,16 +103,8 @@ public class AppDeploymentManuallyManagedNodeTest extends TestNGCitrusSpringSupp
     private JmsEndpoint appStatusEndpoint;
 
     @Autowired
-    @Qualifier("salNodeCreation")
-    private JmsEndpoint salNodeCreation;
-
-    @Autowired
     @Qualifier("salEndpoint")
     private HttpClient salEndpoint;
-
-    @Autowired
-    @Qualifier("resourceManagerEndpoint")
-    private HttpClient resourceManagerEndpoint;
 
     @Autowired
     private Environment env;
@@ -128,9 +122,7 @@ public class AppDeploymentManuallyManagedNodeTest extends TestNGCitrusSpringSupp
         // Initialize MessageSender and SALConnectionManager
         messageSender = new MessageSender(qpidAddress, qpidPort, qpidUsername, qpidPassword, applicationId);
         salConnectionManager = new SALConnectionManager(salEndpoint, objectMapper);
-        resourceManager = new ResourceManager(resourceManagerEndpoint,objectMapper,env);
     }
-
 
 
     @Test
@@ -141,19 +133,18 @@ public class AppDeploymentManuallyManagedNodeTest extends TestNGCitrusSpringSupp
         /*
         * Define and add here the necessary Environmental Variables that are specified in your Kubevela file
         **/
-        appParameters.put("{{REPORT_METRICS_TO_EMS}}", "True");
-        appParameters.put("{{APP_CPU}}", "2.0");
-        appParameters.put("{{APP_RAM}}", "4024Mi");
-        appParameters.put("{{APP_EMS_PORT}}", "61610");
-        appParameters.put("{{APP_EMS_USER}}", env.getProperty("app.ems.username"));
-        appParameters.put("{{APP_EMS_PASSWORD}}", env.getProperty("app.ems.password"));
+//        appParameters.put("{{REPORT_METRICS_TO_EMS}}", "True");
+//        appParameters.put("{{APP_CPU}}", "4.0");
+//        appParameters.put("{{APP_RAM}}", "8048Mi");
+//        appParameters.put("{{APP_EMS_PORT}}", "61610");
+//        appParameters.put("{{APP_EMS_USER}}", env.getProperty("app.ems.username"));
+//        appParameters.put("{{APP_EMS_PASSWORD}}", env.getProperty("app.ems.password"));
 
         Map<String, Object> appCreationPayload = FileTemplatingUtils
-                .loadJSONFileAndSubstitute("rest_processor_app/app_creation_message.json", appParameters);
-        ArrayList<Object> envVars = ((ArrayList<Object>) appCreationPayload.get("environmentVariables"));
+                .loadJSONFileAndSubstitute(Optional.ofNullable(env.getProperty("app.files.creation_message")).orElseThrow(() -> new MissingConfigValueException("app.files.creation_message")), appParameters);
 
         appCreationPayload.put("content",
-                FileTemplatingUtils.loadFileAndSubstitute("rest_processor_app/kubevela.yaml", appParameters));
+                FileTemplatingUtils.loadFileAndSubstitute(Optional.ofNullable(env.getProperty("app.files.kubevela")).orElseThrow(() -> new MissingConfigValueException("app.files.kubevela")), appParameters));
 
         ArrayList<Object> resources = ((ArrayList<Object>) appCreationPayload.get("resources"));
         resources.clear();
@@ -171,77 +162,14 @@ public class AppDeploymentManuallyManagedNodeTest extends TestNGCitrusSpringSupp
         resources.add(cloudResource.toMap());
 
 
-        /*
-        * Configure docker registry in .env.ubi
-        */
-        envVars.add(Map.of("name", "PRIVATE_DOCKER_REGISTRY_SERVER", "value", Optional.ofNullable(env.getProperty("docker.server")).orElseThrow(() -> new MissingConfigValueException("docker.server")), "secret", "false"));
-        envVars.add(Map.of("name", "PRIVATE_DOCKER_REGISTRY_USERNAME", "value", Optional.ofNullable(env.getProperty("docker.username")).orElseThrow(() -> new MissingConfigValueException("docker.username")), "secret", "false"));
-        envVars.add(Map.of("name", "PRIVATE_DOCKER_REGISTRY_PASSWORD", "value", Optional.ofNullable(env.getProperty("docker.password")).orElseThrow(() -> new MissingConfigValueException("docker.password")), "secret", "false"));
-        envVars.add(Map.of("name", "PRIVATE_DOCKER_REGISTRY_EMAIL", "value", Optional.ofNullable(env.getProperty("docker.email")).orElseThrow(() -> new MissingConfigValueException("docker.email")), "secret", "false"));
-        envVars.add(Map.of("name", "ONM_URL", "value", Optional.ofNullable(env.getProperty("onm_url")).orElseThrow(() -> new MissingConfigValueException("onm_url")), "secret", "false"));
-
-
-        /*
-        Configure Manually Managed Node
-         */
-        String deviceJson = null;
-        try {
-            // Modify Name, ID, IP, Password/key Path
-            Map<String, String> rmParameters = new HashMap<>();
-            rmParameters.put("{{DEVICE_ID}}", "UbiRPi-id-1");
-            rmParameters.put("{{DEVICE_NAME}}", "UbiRPi1");
-            rmParameters.put("{{DEVICE_REF}}", "application_id|" + applicationId + "|" + UUID.randomUUID().toString());
-            rmParameters.put("{{DEVICE_PROVIDER}}", "TestingProvider");
-            rmParameters.put("{{DEVICE_IP}}", "100.64.0.5");
-            rmParameters.put("{{DEVICE_PORT}}", "22");
-            rmParameters.put("{{DEVICE_USERNAME}}", "ubuntu");
-            rmParameters.put("{{DEVICE_PASSWORD}}", "112233");
-
-            // Load key.pem file
-            String keyPath = "src/test/resources/mocks/eut.pem";
-//            rmParameters.put("{{DEVICE_PUBLIC_KEY}}", FileTemplatingUtils.loadKeyFromFile(keyPath));
-            rmParameters.put("{{DEVICE_PUBLIC_KEY}}", "");
-
-            // Load JSON template and substitute placeholders
-            deviceJson = FileTemplatingUtils.loadJSONFileAndSubstituteAsString(
-                    "rest_processor_app/resource_discovery_payload.json", rmParameters);
-
-            // print payload
-            logger.info(objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(deviceJson));
-
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-
         // Test SAL connection and cloud providers
         assertTrue(salConnectionManager.loginAndGetSessionId(runner), "Connection has been established with SAL");
         assertTrue(salConnectionManager.validateCloudProviders(runner, cloudResource.getUuid()), "The provided cloud is registered on SAL");
-
-        // Test Resource Manager Connection and add Manually Managed Node
-        assertTrue(resourceManager.loginAndGetSessionId(runner), "Connection has been established with Resource Manager");
-        assertTrue(resourceManager.registerDevice(runner, deviceJson), "Request for Device Registration has been sent");
 
 
         // Header Selectors for receiving published message
         Map<String, String> selectorMap = new HashMap<>();
         selectorMap.put("application", applicationId);
-
-
-        //Assert that the node has been added to sal
-        logger.info("Wait for node to be registered into sal");
-        $(receive(salNodeCreation)
-                .message()
-                .selector(selectorMap)
-                .timeout(20 * 60 * 1000)
-                .validate((message, context) -> {
-                    // print debug message
-                    logger.debug("salNodeCreation payload received");
-                    logger.info("Node has been added to sal");
-                    logger.info(message.getPayload().toString());
-                    // Ignore body
-                }));
-
-
 
         logger.info(objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(appCreationPayload));
 
@@ -261,7 +189,7 @@ public class AppDeploymentManuallyManagedNodeTest extends TestNGCitrusSpringSupp
         /*
          * Send metric model and assert is correctly received by any subscriber
          **/
-        Map<String, Object> metricModelPayload = FileTemplatingUtils.loadJSONFileAndSubstitute("rest_processor_app/metric_model.json",
+        Map<String, Object> metricModelPayload = FileTemplatingUtils.loadJSONFileAndSubstitute(Optional.ofNullable(env.getProperty("app.files.metric_model")).orElseThrow(() -> new MissingConfigValueException("app.files.metric_model")),
                 Map.of("{{APP_ID}}", applicationId));
 
 
@@ -287,7 +215,7 @@ public class AppDeploymentManuallyManagedNodeTest extends TestNGCitrusSpringSupp
         $(receive(evaluatorEndpoint)
                 .message()
                 .selector(selectorMap)
-                .timeout(30000)
+                .timeout(40000)
                 .validate((message, context) -> {
                     // print debug message
                     logger.debug("Message from Evaluator received");
@@ -319,7 +247,7 @@ public class AppDeploymentManuallyManagedNodeTest extends TestNGCitrusSpringSupp
         $(receive(nodeCandidatesRequestSALEndpoint)
                 .message()
                 .selector(selectorMap)
-                .timeout(10000)
+                .timeout(100000)
                 .validate((message, context) -> {
                     // print debug message
                     logger.debug("Message to request candidates received from SAL");
@@ -336,7 +264,7 @@ public class AppDeploymentManuallyManagedNodeTest extends TestNGCitrusSpringSupp
         $(receive(nodeCandidatesReplySALEndpoint)
                 .message()
                 .selector(selectorMap)
-                .timeout(3000)
+                .timeout(10000)
                 .validate((message, context) -> {
                     // print debug message
                     logger.debug("Message that CFSB receives an answer on node candidates from SAL , received");
@@ -353,7 +281,7 @@ public class AppDeploymentManuallyManagedNodeTest extends TestNGCitrusSpringSupp
         $(receive(nodeCandidatesReplyCFSBEndpoint)
                 .message()
                 .selector(selectorMap)
-                .timeout(50000)
+                .timeout(30000)
                 .validate((message, context) -> {
                     // print debug message
                     logger.debug("Message that optimizer receives an answer on node candidates from CFSB , received");
@@ -370,7 +298,7 @@ public class AppDeploymentManuallyManagedNodeTest extends TestNGCitrusSpringSupp
         $(receive(defineClusterEndpoint)
                 .message()
                 .selector(selectorMap)
-                .timeout(15 * 60 * 1000)
+                .timeout(50000)
                 .validate((message, context) -> {
                     // print debug message
                     logger.debug("Message that optimizer defined the cluster received");
@@ -410,7 +338,7 @@ public class AppDeploymentManuallyManagedNodeTest extends TestNGCitrusSpringSupp
         $(receive(deployClusterEndpoint)
                 .message()
                 .selector(selectorMap)
-                .timeout(8000)
+                .timeout(10000)
                 .validate((message, context) -> {
                     // print debug message
                     logger.debug("Message that optimizer deploys the cluster received");
