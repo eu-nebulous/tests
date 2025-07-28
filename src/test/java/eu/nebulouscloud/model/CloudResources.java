@@ -67,5 +67,14 @@ public class CloudResources {
         return resourceMap;
     }
 
-
+    @Override
+    public String toString() {
+        return "CloudResources{" +
+                "uuid='" + uuid + '\'' +
+                ", title='" + title + '\'' +
+                ", platform='" + platform + '\'' +
+                ", enabled='" + enabled + '\'' +
+                ", regions='" + regions + '\'' +
+                '}';
+    }
 }

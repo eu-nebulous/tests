@@ -3,9 +3,9 @@ package eu.nebulouscloud.util;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import eu.nebulouscloud.model.CloudResources;
 import eu.nebulouscloud.model.SALAPIClient;
 
-import jakarta.servlet.http.Cookie;
 import org.citrusframework.TestCaseRunner;
 import org.citrusframework.http.actions.HttpActionBuilder;
 import org.citrusframework.http.client.HttpClient;
@@ -14,6 +14,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 
+import java.util.List;
+import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.StreamSupport;
@@ -184,8 +186,134 @@ public class SALConnectionManager {
                 }
             }
         }
-
         return status.get();
     }
+    /**
+     * Registers a new cloud in SAL using the /cloud endpoint.
+     *
+     * @param runner                    The Citrus TestRunner.
+     * @param cloudRegistrationPayload A Map representing the JSON body for the POST request.
+     * @return true if the cloud was registered successfully, false otherwise.
+     */
+    public boolean addCloud(TestCaseRunner runner, List<Map<String, Object>> cloudRegistrationPayload) {
+        try {
+            runner.run(HttpActionBuilder.http()
+                    .client(salEndpoint)
+                    .send()
+                    .post("/cloud")
+                    .message()
+                    .type(MessageType.JSON)
+                    .header("Content-Type", "application/json")
+                    .header("sessionid", salapiClient.getSessionId())
+                    .body(objectMapper.writeValueAsString(cloudRegistrationPayload)));
 
+            runner.run(HttpActionBuilder.http()
+                    .client(salEndpoint)
+                    .receive()
+                    .response(HttpStatus.OK));
+
+            logger.info("Cloud registration completed successfully.");
+            return true;
+        } catch (Exception e) {
+            logger.error("Cloud registration failed: {}", e.getMessage(), e);
+            return false;
+        }
+    }
+
+    /**
+     * Retrieves cloud resources from the SAL API based on the provided cloud name.
+     *
+     * @param runner    The Citrus TestRunner for running Citrus actions.
+     * @param cloudName The name of the cloud to retrieve resources for.
+     * @return A {@link CloudResources} object containing details of the cloud if found, or null if not found.
+     */
+    public CloudResources getCloud(TestCaseRunner runner, String cloudName) {
+        AtomicReference<CloudResources> cloudResource = new AtomicReference<>();
+
+        runner.run(HttpActionBuilder.http()
+                .client(salEndpoint)
+                .send()
+                .get("/cloud")
+                .message()
+                .type(MessageType.JSON)
+                .header("sessionid", salapiClient.getSessionId()));
+
+        runner.run(HttpActionBuilder.http()
+                .client(salEndpoint)
+                .receive()
+                .response(HttpStatus.OK)
+                .message()
+                .validate((message, context) -> {
+                    String payload = message.getPayload().toString();
+                    try {
+                        JsonNode cloudList = objectMapper.readTree(payload);
+                        for (JsonNode cloud : cloudList) {
+                            if (cloud.has("cloudId") && cloudName.equals(cloud.get("cloudId").asText())) {
+                                JsonNode deployedRegions = cloud.get("deployedRegions");
+                                String regions = (deployedRegions != null && deployedRegions.fieldNames().hasNext())
+                                        ? deployedRegions.fieldNames().next()
+                                        : "";
+
+                                cloudResource.set(new CloudResources(
+                                        cloud.get("cloudId").asText(),
+                                        cloud.get("cloudId").asText(),
+                                        cloud.get("cloudProvider").asText(),
+                                        "true",
+                                        regions
+                                ));
+                                break;
+                            }
+                        }
+                    } catch (Exception e) {
+                        throw new RuntimeException("Failed to parse cloud resources: " + e.getMessage(), e);
+                    }
+                }));
+        logger.info("Cloud resource: {}", cloudResource.toString());
+        return cloudResource.get();
+    }
+
+    /**
+     * Checks if there is any asynchronous operation currently running on the SAL API.
+     *
+     * @param runner The Citrus TestRunner used to perform HTTP requests and actions.
+     * @return true if any asynchronous operation is running, false otherwise.
+     */
+    public boolean isAnyAsyncNode(TestCaseRunner runner) {
+        long maxWaitTimeMillis = 60 * 60 * 1000;
+        long retryIntervalMillis = 40 * 1000;
+        long startTime = System.currentTimeMillis();
+
+        AtomicBoolean isAsyncRunning = new AtomicBoolean(true);
+
+        while (isAsyncRunning.get() && (System.currentTimeMillis() - startTime) < maxWaitTimeMillis) {
+            runner.run(HttpActionBuilder.http()
+                    .client(salEndpoint)
+                    .send()
+                    .get("/cloud/async")
+                    .message()
+                    .header("sessionid", salapiClient.getSessionId()));
+
+            runner.run(HttpActionBuilder.http()
+                    .client(salEndpoint)
+                    .receive()
+                    .response(HttpStatus.OK)
+                    .message()
+                    .validate((message, context) -> {
+                        String payload = message.getPayload().toString();
+                        logger.info("Async node response: {}", payload);
+                        isAsyncRunning.set(Boolean.parseBoolean(payload));
+                    }));
+
+            if (isAsyncRunning.get()) {
+                try {
+                    Thread.sleep(retryIntervalMillis);
+                } catch (InterruptedException e) {
+                    logger.error("Retry sleep interrupted", e);
+                    Thread.currentThread().interrupt();
+                }
+            }
+        }
+
+        return isAsyncRunning.get();
+    }
 }

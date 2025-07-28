@@ -32,6 +32,7 @@ import java.util.*;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import static org.citrusframework.actions.ReceiveMessageAction.Builder.receive;
+import static org.testng.Assert.assertFalse;
 import static org.testng.Assert.assertTrue;
 
 /**
@@ -149,22 +150,55 @@ public class AppDeploymentCloudProvider extends TestNGCitrusSpringSupport {
         ArrayList<Object> resources = ((ArrayList<Object>) appCreationPayload.get("resources"));
         resources.clear();
 
-        /*
-         * Config the cloud provider in .env.ubi
-         **/
-        CloudResources cloudResource = new CloudResources(
-                Optional.ofNullable(env.getProperty("cloud_resources.uuid")).orElseThrow(() -> new MissingConfigValueException("cloud_resources.uuid")),
-                Optional.ofNullable(env.getProperty("cloud_resources.title")).orElseThrow(() -> new MissingConfigValueException("cloud_resources.title")),
-                Optional.ofNullable(env.getProperty("cloud_resources.platform")).orElseThrow(() -> new MissingConfigValueException("cloud_resources.platform")),
-                Optional.ofNullable(env.getProperty("cloud_resources.enabled")).orElseThrow(() -> new MissingConfigValueException("cloud_resources.enabled")),
-                Optional.ofNullable(env.getProperty("cloud_resources.regions")).orElseThrow(() -> new MissingConfigValueException("cloud_resources.regions"))
+        assertTrue(salConnectionManager.loginAndGetSessionId(runner), "Connection has been established with SAL");
+
+        boolean useRegisteredCloud = Boolean.parseBoolean(
+                Optional.ofNullable(env.getProperty("cloud_resources.use_registered"))
+                        .orElse("false") // defaulting to false to keep backward compatibility
         );
-        resources.add(cloudResource.toMap());
+
+        if (useRegisteredCloud) {
+            // Use already registered cloud resource from environment variables
+            CloudResources cloudResource = new CloudResources(
+                    Optional.ofNullable(env.getProperty("cloud_resources.uuid"))
+                            .orElseThrow(() -> new MissingConfigValueException("cloud_resources.uuid")),
+                    Optional.ofNullable(env.getProperty("cloud_resources.title"))
+                            .orElseThrow(() -> new MissingConfigValueException("cloud_resources.title")),
+                    Optional.ofNullable(env.getProperty("cloud_resources.platform"))
+                            .orElseThrow(() -> new MissingConfigValueException("cloud_resources.platform")),
+                    Optional.ofNullable(env.getProperty("cloud_resources.enabled"))
+                            .orElseThrow(() -> new MissingConfigValueException("cloud_resources.enabled")),
+                    Optional.ofNullable(env.getProperty("cloud_resources.regions"))
+                            .orElseThrow(() -> new MissingConfigValueException("cloud_resources.regions"))
+            );
+            resources.add(cloudResource.toMap());
+            assertTrue(salConnectionManager.validateCloudProviders(runner, cloudResource.getUuid()), "The provided cloud is registered on SAL");
+        } else {
+            String cloudName = "uio-openstack-optimizer-" + new SimpleDateFormat("HHmmssddMM").format(new Date());
+
+            Map<String, String> cloudRegistrationParameters = new HashMap<>();
+            cloudRegistrationParameters.put("{{CLOUD_NAME}}", cloudName);
+            cloudRegistrationParameters.put("{{OS_SECRET}}", Optional.ofNullable(env.getProperty("cloud_resources.secret"))
+                    .orElseThrow(() -> new MissingConfigValueException("cloud_resources.secret")));
+            List<Map<String, Object>> cloudRegistrationPayloads = FileTemplatingUtils
+                    .loadJSONArrayFileAndSubstitute(
+                            Optional.ofNullable(env.getProperty("app.files.cloud_registration"))
+                                    .orElseThrow(() -> new MissingConfigValueException("app.files.cloud_registration")),
+                            cloudRegistrationParameters);
+
+            logger.info(objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(cloudRegistrationPayloads));
+            assertTrue(salConnectionManager.addCloud(runner, cloudRegistrationPayloads), "The provided cloud has been registered on SAL");
+
+
+            CloudResources cloudResource = salConnectionManager.getCloud(runner, cloudName);
+            assertFalse(salConnectionManager.isAnyAsyncNode(runner), "There should be no async nodes remaining");
+
+            resources.add(cloudResource.toMap());
+        }
+
 
 
         // Test SAL connection and cloud providers
-        assertTrue(salConnectionManager.loginAndGetSessionId(runner), "Connection has been established with SAL");
-        assertTrue(salConnectionManager.validateCloudProviders(runner, cloudResource.getUuid()), "The provided cloud is registered on SAL");
 
 
         // Header Selectors for receiving published message

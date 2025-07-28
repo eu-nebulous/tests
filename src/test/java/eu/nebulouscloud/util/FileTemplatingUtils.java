@@ -7,8 +7,10 @@ import java.io.InputStreamReader;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
+import com.fasterxml.jackson.core.type.TypeReference;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -30,6 +32,22 @@ public class FileTemplatingUtils {
         String jsonContent = loadFileAndSubstitute(path, substitutions);
         return om.readValue(jsonContent, HashMap.class);
     }
+
+    /**
+     * Load a JSON array file and perform the substitutions.
+     *
+     * @param path          Path to the JSON array file.
+     * @param substitutions Map of placeholders and corresponding replacement values.
+     * @return Parsed JSON array as a List of Maps.
+     * @throws Exception If file reading or JSON parsing fails.
+     */
+    public static List<Map<String, Object>> loadJSONArrayFileAndSubstitute(String path, Map<String, String> substitutions) throws Exception {
+        String jsonContent = loadFileAndSubstitute(path, substitutions);
+        return om.readValue(jsonContent, new TypeReference<List<Map<String, Object>>>() {
+        });
+    }
+
+    
 
     /**
      * Load a JSON file and perform substitutions, returning the JSON as a string.

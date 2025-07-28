@@ -1,7 +1,7 @@
 qpid-jms:
   url:  '${NEBULOUS_BROKER_URL:amqp://localhost:5672}'
   address: '${NEBULOUS_BROKER_ADDRESS:localhost}'
-  port: 5672
+  port: '${NEBULOUS_BROKER_PORT:5672}'
   username: '${NEBULOUS_BROKER_USERNAME:admin}'
   password: '${NEBULOUS_BROKER_PASSWORD:nebulous}'
 
@@ -45,6 +45,8 @@ cloud_resources:
   platform: '${CLOUD_RESOURCES_PLATFORM}'
   enabled: '${CLOUD_RESOURCES_ENABLED}'
   regions: '${CLOUD_RESOURCES_REGIONS}'
+  use_registered: '${CLOUD_RESOURCES_USE_REGISTERED}'
+  secret: '${CLOUD_RESOURCES_SECRET}'
 
 docker:
   server: '${PRIVATE_DOCKER_REGISTRY_SERVER}'
@@ -57,6 +59,7 @@ app:
     creation_message: '${APP_CREATION_MESSAGE:app_creation_files/app_creation_message.json}'
     kubevela: '${KUBEVELA_FILE:app_creation_files/kubevela.yaml}'
     metric_model: '${METRIC_MODEL:app_creation_files/metric_model.json}'
+    cloud_registration: '${CLOUD_REGISTRATION:app_creation_files/os_registration.json}'
   ems:
     username: '${APP_EMS_USER}'
     password: '${APP_EMS_PASSWORD}'
