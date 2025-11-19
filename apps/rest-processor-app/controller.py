@@ -10,9 +10,9 @@ from time import sleep
 import time
 import traceback
 from uuid import uuid4
-from fastapi import FastAPI
+from fastapi import FastAPI, Form
 import stomp
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, RedirectResponse
 import logging
 
 logger = logging.getLogger(__name__)
@@ -196,12 +196,12 @@ async def startup_event():
 
 
 @app.post("/")
-async def root(t : int):
+async def root(t: int = Form(...)):
     
     pending_request = PendingRequest(t,time.time())
     pending_requests.put(pending_request)
     logger.debug("New request: "+str(pending_request))
-    return {"message": "Request recieved, "+str(pending_request)}
+    return RedirectResponse(url="/", status_code=303)
 
 
 @app.get("/", response_class=HTMLResponse)
@@ -282,6 +282,23 @@ async def root():
             </style>
         </head>
         <body>
+            <div style="margin-bottom: 20px; padding: 15px; background-color: #f9f9f9; border: 1px solid #ddd; border-radius: 5px;">
+                <h2>Submit New Request</h2>
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <form method="POST" action="/" style="display: inline;">
+                        <input type="hidden" name="t" value="1">
+                        <button type="submit" style="padding: 8px 16px; background-color: #04AA6D; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold;">1 second</button>
+                    </form>
+                    <form method="POST" action="/" style="display: inline;">
+                        <input type="hidden" name="t" value="5">
+                        <button type="submit" style="padding: 8px 16px; background-color: #04AA6D; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold;">5 seconds</button>
+                    </form>
+                    <form method="POST" action="/" style="display: inline;">
+                        <input type="hidden" name="t" value="10">
+                        <button type="submit" style="padding: 8px 16px; background-color: #04AA6D; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold;">10 seconds</button>
+                    </form>
+                </div>
+            </div>
             <div id="pending">
             <table>
                 <h1>Pending Requests:</h1>
@@ -291,6 +308,16 @@ async def root():
                     <th>Age</th>
                 </tr>
                 {pending_requests_html}
+            </table>
+            </div>
+            <div >
+            <table >
+                <h1>Workers: {workers_count}</h1>
+                <tr>
+                    <th>Worker id</th>
+                    <th>Timeout</th>
+                </tr>
+                {workers_table_html}
             </table>
             </div>
             <div id="completed">
@@ -307,16 +334,7 @@ async def root():
             </table>
             </div>
             
-            <div >
-            <table >
-                <h1>Workers: {workers_count}</h1>
-                <tr>
-                    <th>Worker id</th>
-                    <th>Timeout</th>
-                </tr>
-                {workers_table_html}
-            </table>
-            </div>
+            
             
         </body>
     </html>
